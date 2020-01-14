@@ -32,8 +32,8 @@ void setup() {
    delay(5);  // Wait for EasyDriver wake up
 
    //  Set Max Speed and Acceleration of each Steppers at startup for homing
-  stepperX.setMaxSpeed(100.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
-  stepperX.setAcceleration(100.0);  // Set Acceleration of Stepper
+  stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
+  stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
  
 
 // Start Homing procedure of Stepper Motor at startup
@@ -42,28 +42,28 @@ void setup() {
 
   while (digitalRead(home_switch)) {  // Make the Stepper move CCW until the switch is activated   
     stepperX.moveTo(initial_homing);  // Set the position to move to
-    initial_homing--;  // Decrease by 1 for next move if needed
+    initial_homing++;  // Decrease by 1 for next move if needed
     stepperX.run();  // Start moving the stepper
-    delay(5);
+    delay(.01);
 }
 
   stepperX.setCurrentPosition(0);  // Set the current position as zero for now
-  stepperX.setMaxSpeed(100.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
-  stepperX.setAcceleration(100.0);  // Set Acceleration of Stepper
+  stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
+  stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
   initial_homing=1;
 
   while (!digitalRead(home_switch)) { // Make the Stepper move CW until the switch is deactivated
     stepperX.moveTo(initial_homing);  
     stepperX.run();
-    initial_homing++;
-    delay(5);
+    initial_homing--;
+    delay(.01);
   }
   
   stepperX.setCurrentPosition(0);
   Serial.println("Homing Completed");
   Serial.println("");
-  stepperX.setMaxSpeed(1000.0);      // Set Max Speed of Stepper (Faster for regular movements)
-  stepperX.setAcceleration(1000.0);  // Set Acceleration of Stepper
+  stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Faster for regular movements)
+  stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
 
 // Print out Instructions on the Serial Monitor at Start
   Serial.println("Enter Travel distance (Positive for CW / Negative for CCW and Zero for back to Home): ");
@@ -76,21 +76,22 @@ void loop() {
   move_finished=0;  // Set variable for checking move of the Stepper
   
   TravelX= Serial.parseInt();  // Put numeric value from buffer in TravelX variable
-  if (TravelX < 0 || TravelX > 1350) {  // Make sure the position entered is not beyond the HOME or MAX position
+  if (TravelX < 0 || TravelX > 20000) {  // Make sure the position entered is not beyond the HOME or MAX position
     Serial.println("");
-    Serial.println("Please enter a value greater than zero and smaller or equal to 1350.....");
+    Serial.println("Please enter a value greater than zero and smaller or equal to 20000.....");
     Serial.println("");
   } else {
     Serial.print("Moving stepper into position: ");
     Serial.println(TravelX);
   
-  stepperX.moveTo(TravelX);  // Set new moveto position of Stepper
+  stepperX.moveTo(0 - TravelX);  // Set new moveto position of Stepper
+  
   
   delay(1000);  // Wait 1 seconds before moving the Stepper
   }
   }
 
-  if (TravelX >= 0 && TravelX <= 1350) {
+  if (TravelX >= 0 && TravelX <= 20000) {
 
 // Check if the Stepper has reached desired position
   if ((stepperX.distanceToGo() != 0)) {
