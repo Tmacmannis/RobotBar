@@ -1,14 +1,4 @@
-/*  Motor Homing code using AccelStepper and the Serial Monitor
- 
-Created by Yvan / https://Brainy-Bits.com
-This code is in the public domain...
-You can: copy it, use it, modify it, share it or just plain ignore it!
-Thx!
-
-*/
-
 #include "AccelStepper.h" 
-// Library created by Mike McCauley at http://www.airspayce.com/mikem/arduino/AccelStepper/
 
 // AccelStepper Setup
 AccelStepper stepperX(1, 2, 3);   // 1 = Easy Driver interface
