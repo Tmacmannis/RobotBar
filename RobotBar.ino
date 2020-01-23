@@ -15,13 +15,37 @@ long initial_homing=-1;  // Used to Home Stepper at startup
 
 
 void setup() {
-   Serial.begin(9600);  // Start the Serial monitor with speed of 9600 Bauds
-   
+   Serial.begin(9600);
    pinMode(home_switch, INPUT_PULLUP);
-   
-   delay(5);  // Wait for EasyDriver wake up
+   delay(5);
 
-   //  Set Max Speed and Acceleration of each Steppers at startup for homing
+   homeMainStepper();
+
+// Print out Instructions on the Serial Monitor at Start
+  Serial.println("Enter Travel distance (Positive for CW / Negative for CCW and Zero for back to Home): ");
+}
+
+void loop() {
+
+  userEnteredPosition();
+  delay(2000);
+  drink1();
+  delay(1000);
+  drink2();
+  delay(1000);
+  drink3();
+  delay(1000);
+  drink4();
+  delay(1000);
+
+}
+
+
+
+//List of Methods used.. Can be put in separate files
+//*****************************************************************************************************************************************************
+void homeMainStepper(){
+     //  Set Max Speed and Acceleration of each Steppers at startup for homing
   stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
   stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
  
@@ -35,7 +59,7 @@ void setup() {
     initial_homing++;  // Decrease by 1 for next move if needed
     stepperX.run();  // Start moving the stepper
     delay(.01);
-}
+  }
 
   stepperX.setCurrentPosition(0);  // Set the current position as zero for now
   stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
@@ -54,48 +78,74 @@ void setup() {
   Serial.println("");
   stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Faster for regular movements)
   stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
-
-// Print out Instructions on the Serial Monitor at Start
-  Serial.println("Enter Travel distance (Positive for CW / Negative for CCW and Zero for back to Home): ");
 }
 
-void loop() {
+//*****************************************************************************************************************************************************
 
- while (Serial.available()>0)  { // Check if values are available in the Serial Buffer
+void userEnteredPosition{
+  while (Serial.available()>0)  { // Check if values are available in the Serial Buffer    
+    TravelX= Serial.parseInt();  // Put numeric value from buffer in TravelX variable
+    if (TravelX < 0 || TravelX > 20000) {  // Make sure the position entered is not beyond the HOME or MAX position
+      Serial.println("");
+      Serial.println("Please enter a value greater than zero and smaller or equal to 20000.....");
+      Serial.println("");
+    } else {
+      Serial.print("Moving stepper into position: ");
+      Serial.println(TravelX);
+      delay(1000);
+      moveToPosition(0 - TravelX);
+        // Set new moveto position of Stepper
+    }
+  }
+}
 
-  move_finished=0;  // Set variable for checking move of the Stepper
-  
-  TravelX= Serial.parseInt();  // Put numeric value from buffer in TravelX variable
-  if (TravelX < 0 || TravelX > 20000) {  // Make sure the position entered is not beyond the HOME or MAX position
-    Serial.println("");
-    Serial.println("Please enter a value greater than zero and smaller or equal to 20000.....");
-    Serial.println("");
-  } else {
-    Serial.print("Moving stepper into position: ");
-    Serial.println(TravelX);
-  
-  stepperX.moveTo(0 - TravelX);  // Set new moveto position of Stepper
-  
-  
-  delay(1000);  // Wait 1 seconds before moving the Stepper
-  }
-  }
+//*****************************************************************************************************************************************************
 
-  if (TravelX >= 0 && TravelX <= 20000) {
+void moveToPosition(int pos){
 
-// Check if the Stepper has reached desired position
-  if ((stepperX.distanceToGo() != 0)) {
-    
-    stepperX.run();  // Move Stepper into position
-    
-  }
+  move_finished=0;
+  stepperX.moveTo(pos);
 
-// If move is completed display message on Serial Monitor
-  if ((move_finished == 0) && (stepperX.distanceToGo() == 0)) {
-    Serial.println("COMPLETED!");
-    Serial.println("");
-     Serial.println("Enter Travel distance (Positive for CW / Negative for CCW and Zero for back to Home): ");
-    move_finished=1;  // Reset move variable
+  while(move_finished == 0){
+
+    // Check if the Stepper has reached desired position
+    if ((stepperX.distanceToGo() != 0)) {
+      
+      stepperX.run();  // Move Stepper into position
+      
+    }
+
+    // If move is completed display message on Serial Monitor
+    if ((move_finished == 0) && (stepperX.distanceToGo() == 0)) {
+      Serial.println("COMPLETED!");
+      Serial.println("");
+      Serial.println("Enter Travel distance (Positive for CW / Negative for CCW and Zero for back to Home): ");
+      move_finished=1;  // Reset move variable
+      }
   }
-  }
+}
+
+//*****************************************************************************************************************************************************
+//Move to drink examples
+
+void drink1(){
+  moveToPosition(5000)
+}
+
+//*****************************************************************************************************************************************************
+
+void drink2(){
+  moveToPosition(8000)
+}
+
+//*****************************************************************************************************************************************************
+
+void drink3(){
+  moveToPosition(11000)
+}
+
+//*****************************************************************************************************************************************************
+
+void drink4(){
+  moveToPosition(15000)
 }
