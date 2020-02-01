@@ -1,3 +1,11 @@
+/*
+Drink1: 0
+Drink2: 8750
+Drink3: 17600
+Drink4: 26600
+*/
+
+
 #include "AccelStepper.h" 
 
 // AccelStepper Setup
@@ -30,13 +38,29 @@ void setup() {
 
 void loop() {
 
-  userEnteredPosition();
+  // userEnteredPosition();
 
-  delay(2000);
-  cocktail1();
+  // delay(2000);
+  // cocktail1();
+  // delay(1000);
+  // cocktail2();
+  // delay(10000);
+
+  //drink1();
+  //delay(1000);
+  // drink2();
+  // delay(1000);
+  // drink3();
+  // delay(1000);
+  // drink4();
+  // delay(1000);
+  //homeMainStepper();
+  //pourOneShot();
+  moveToPosition(16000);
   delay(1000);
-  cocktail2();
-  delay(10000);
+  homeMainStepper();
+
+
 
 }
 
@@ -48,7 +72,6 @@ void homeMainStepper(){
      //  Set Max Speed and Acceleration of each Steppers at startup for homing
   stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
   stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
- 
 
 // Start Homing procedure of Stepper Motor at startup
 
@@ -60,6 +83,7 @@ void homeMainStepper(){
     stepperX.run();  // Start moving the stepper
     delay(.01);
   }
+  Serial.print(initial_homing);
 
   stepperX.setCurrentPosition(0);  // Set the current position as zero for now
   stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
@@ -115,6 +139,7 @@ void moveToPosition(int pos){
       move_finished=1;  // Reset move variable
       }
   }
+
 }
 
 //*****************************************************************************************************************************************************
@@ -122,7 +147,7 @@ void moveToPosition(int pos){
 void pourOneShot() {
 
   move_finished=0;
-  stepperY.moveTo(2000);
+  stepperY.moveTo(4100);
 
   while(move_finished == 0){
 
@@ -141,7 +166,7 @@ void pourOneShot() {
   }
 
 
-  delay(3000);
+  delay(1000);
 
   move_finished=0;
   stepperY.moveTo(0);
@@ -168,28 +193,28 @@ void pourOneShot() {
 //Move to drink examples
 
 void drink1(){
-  moveToPosition(5000);
+  moveToPosition(0);
   pourOneShot();
 }
 
 //*****************************************************************************************************************************************************
 
 void drink2(){
-  moveToPosition(8000);
+  moveToPosition(8750);
   pourOneShot();
 }
 
 //*****************************************************************************************************************************************************
 
 void drink3(){
-  moveToPosition(11000);
+  moveToPosition(17600);
   pourOneShot();
 }
 
 //*****************************************************************************************************************************************************
 
 void drink4(){
-  moveToPosition(15000);
+  moveToPosition(26600);
   pourOneShot();
 }
 
@@ -208,3 +233,6 @@ void cocktail2(){
   drink4();
   moveToPosition(0);
 }
+
+
+//tim
