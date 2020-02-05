@@ -28,7 +28,7 @@ void setup() {
   pinMode(home_switch, INPUT_PULLUP);
   delay(5);
 
-  homeMainStepper();
+  //homeMainStepper();
 
 
   stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Faster for regular movements)
@@ -147,7 +147,7 @@ void pourOneShot() {
 
     // If move is completed display message on Serial Monitor
     if ((move_finished == 0) && (stepperY.distanceToGo() == 0)) {
-      Serial.println("Shot Poured");
+      //Serial.println("Shot Poured");
       move_finished=1;  // Reset move variable
       }
   }
