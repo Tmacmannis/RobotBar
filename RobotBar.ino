@@ -7,8 +7,13 @@ Drink4: 26600
 
 char BluetoothData; // the data received from bluetooth serial link
 char EnteredData;
-
+#include <FastLED.h>
 #include "AccelStepper.h" 
+
+#define NUM_LEDS 70
+#define DATA_PIN 13
+
+CRGB leds[NUM_LEDS];
 
 // AccelStepper Setup
 AccelStepper stepperX(1, 4, 5);   // 1 = Easy Driver interface
@@ -27,10 +32,15 @@ long initial_homing=-1;  // Used to Home Stepper at startup
 void setup() {
   Serial.begin(9600);
   pinMode(home_switch, INPUT_PULLUP);
+  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);  // GRB ordering is assumed
+  FastLED.setBrightness(100);
+  FastLED.clear();
+  FastLED.show();
   delay(5);
 
-  //homeMainStepper();
+  moveDot();
 
+  homeMainStepper();
 
   stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Faster for regular movements)
   stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
@@ -42,11 +52,21 @@ void loop() {
 
   //Process info coming from bluetooth app
   if (Serial.available()){
-    BluetoothData=Serial.read(); //Get next character from bluetooth
-    
-    if(BluetoothData=='G') cocktail1();
-    if(BluetoothData=='R') cocktail2();
-    if(BluetoothData=='V') cocktail3();
+    TravelX= Serial.parseInt(); //Get next character from bluetooth
+
+    switch(TravelX){
+      case 1: 
+        Serial.println("one was entered");
+        cocktail1();
+      break;
+      case 2:
+        Serial.println("two was entered");
+        cocktail2();
+      break;
+    }
+//    if(BluetoothData=='G') cocktail1();
+//    if(BluetoothData=='R') cocktail2();
+//    if(BluetoothData=='V') cocktail3();
 
 
     
@@ -60,6 +80,7 @@ void loop() {
 //List of Methods used.. Can be put in separate files
 //*****************************************************************************************************************************************************
 void homeMainStepper(){
+  setLEDsHoming();
      //  Set Max Speed and Acceleration of each Steppers at startup for homing
   stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
   stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
@@ -91,6 +112,7 @@ void homeMainStepper(){
   stepperX.setCurrentPosition(0);
   Serial.println("Homing Completed");
   Serial.println("");
+  setLEDsDoneHoming();
   
 }
 
