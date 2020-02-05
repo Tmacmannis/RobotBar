@@ -211,7 +211,7 @@ void drink4(){
 //*****************************************************************************************************************************************************
 
 void cocktail1(){
-  Serial.print("Gin & Tonic");
+  Serial.println("Gin & Tonic");
   drink1();
   drink3();
   moveToPosition(0);
@@ -222,7 +222,7 @@ void cocktail1(){
 //*****************************************************************************************************************************************************
 
 void cocktail2(){
-  Serial.print("Rum & Coke");
+  Serial.println("Rum & Coke");
   drink2();
   drink4();
   moveToPosition(0);
@@ -232,7 +232,7 @@ void cocktail2(){
 }
 
 void cocktail3(){
-  Serial.print("Vodka Cranberry");
+  Serial.println("Vodka Cranberry");
   drink1();
   drink4();
   moveToPosition(0);
