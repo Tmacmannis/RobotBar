@@ -6,6 +6,7 @@ Drink4: 26600
 */
 
 char BluetoothData; // the data received from bluetooth serial link
+char EnteredData;
 
 #include "AccelStepper.h" 
 
@@ -42,9 +43,12 @@ void loop() {
   //Process info coming from bluetooth app
   if (Serial.available()){
     BluetoothData=Serial.read(); //Get next character from bluetooth
+    
     if(BluetoothData=='G') cocktail1();
     if(BluetoothData=='R') cocktail2();
     if(BluetoothData=='V') cocktail3();
+
+
     
   }
 
@@ -120,9 +124,7 @@ void moveToPosition(int pos){
 
     // If move is completed display message on Serial Monitor
     if ((move_finished == 0) && (stepperX.distanceToGo() == 0)) {
-      Serial.println("COMPLETED!");
       Serial.println("");
-      Serial.println("Enter Travel distance (Positive for CW / Negative for CCW and Zero for back to Home): ");
       move_finished=1;  // Reset move variable
       }
   }
@@ -182,6 +184,7 @@ void pourOneShot() {
 void drink1(){
   moveToPosition(0);
   pourOneShot();
+  
 }
 
 //*****************************************************************************************************************************************************
@@ -212,6 +215,8 @@ void cocktail1(){
   drink1();
   drink3();
   moveToPosition(0);
+  Serial.print("Done!");
+  serialFlush();
 }
 
 //*****************************************************************************************************************************************************
@@ -221,6 +226,9 @@ void cocktail2(){
   drink2();
   drink4();
   moveToPosition(0);
+  Serial.print("Done!");
+  serialFlush();
+  
 }
 
 void cocktail3(){
@@ -228,6 +236,13 @@ void cocktail3(){
   drink1();
   drink4();
   moveToPosition(0);
+  Serial.print("Done!");
+  serialFlush();
 }
 
+void serialFlush(){
+  while(Serial.available() > 0) {
+    char t = Serial.read();
+  }
+}
 //tim (is gay)
