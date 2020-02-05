@@ -5,6 +5,7 @@ Drink3: 17600
 Drink4: 26600
 */
 
+char BluetoothData; // the data received from bluetooth serial link
 
 #include "AccelStepper.h" 
 
@@ -38,28 +39,14 @@ void setup() {
 
 void loop() {
 
-  // userEnteredPosition();
-
-  // delay(2000);
-  // cocktail1();
-  // delay(1000);
-  // cocktail2();
-  // delay(10000);
-
-  //drink1();
-  //delay(1000);
-  // drink2();
-  // delay(1000);
-  // drink3();
-  // delay(1000);
-  // drink4();
-  // delay(1000);
-  //homeMainStepper();
-  //pourOneShot();
-  moveToPosition(16000);
-  delay(1000);
-  homeMainStepper();
-
+  //Process info coming from bluetooth app
+  if (Serial.available()){
+    BluetoothData=Serial.read(); //Get next character from bluetooth
+    if(BluetoothData=='G') cocktail1();
+    if(BluetoothData=='R') cocktail2();
+    if(BluetoothData=='V') cocktail3();
+    
+  }
 
 
 }
@@ -221,6 +208,7 @@ void drink4(){
 //*****************************************************************************************************************************************************
 
 void cocktail1(){
+  Serial.print("Gin & Tonic");
   drink1();
   drink3();
   moveToPosition(0);
@@ -229,10 +217,17 @@ void cocktail1(){
 //*****************************************************************************************************************************************************
 
 void cocktail2(){
+  Serial.print("Rum & Coke");
   drink2();
   drink4();
   moveToPosition(0);
 }
 
+void cocktail3(){
+  Serial.print("Vodka Cranberry");
+  drink1();
+  drink4();
+  moveToPosition(0);
+}
 
-//tim
+//tim (is gay)
