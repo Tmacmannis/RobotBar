@@ -11,7 +11,7 @@ char EnteredData;
 #include "AccelStepper.h" 
 
 #define NUM_LEDS 70
-#define DATA_PIN 13
+#define DATA_PIN 10
 
 CRGB leds[NUM_LEDS];
 
@@ -28,6 +28,10 @@ long TravelX;  // Used to store the X value entered in the Serial Monitor
 int move_finished=1;  // Used to check if move is completed
 long initial_homing=-1;  // Used to Home Stepper at startup
 
+unsigned long previousMillis = 0;
+const long interval = 1000;
+
+boolean red = true;
 
 void setup() {
   Serial.begin(9600);
@@ -143,6 +147,8 @@ void moveToPosition(int pos){
       stepperX.run();  // Move Stepper into position
       
     }
+
+    changeColorEverySec();
 
     // If move is completed display message on Serial Monitor
     if ((move_finished == 0) && (stepperX.distanceToGo() == 0)) {
