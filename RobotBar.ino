@@ -9,6 +9,7 @@ char BluetoothData; // the data received from bluetooth serial link
 char EnteredData;
 #include <FastLED.h>
 #include "AccelStepper.h" 
+#include <Wire.h>
 
 #define NUM_LEDS 70
 #define DATA_PIN 10
@@ -29,7 +30,9 @@ int move_finished=1;  // Used to check if move is completed
 long initial_homing=-1;  // Used to Home Stepper at startup
 
 unsigned long previousMillis = 0;
-const long interval = 1000;
+const long interval = 100;
+
+unsigned char byte1, byte2, byte3, byte4;
 
 boolean red = true;
 
@@ -40,6 +43,7 @@ void setup() {
   FastLED.setBrightness(100);
   FastLED.clear();
   FastLED.show();
+  Wire.begin();
   delay(5);
 
   moveDot();
@@ -98,6 +102,9 @@ void homeMainStepper(){
     initial_homing--;  // Decrease by 1 for next move if needed
     stepperX.run();  // Start moving the stepper
     delay(.01);
+    // Serial.println(stepperX.currentPosition());
+    writeToSlave(stepperX.currentPosition());
+
   }
   Serial.print(initial_homing);
 
@@ -274,3 +281,38 @@ void serialFlush(){
   }
 }
 //tim (is gay)
+
+
+void writeToSlave(long pos){
+
+	unsigned long currentMillis = millis();
+	if (currentMillis - previousMillis >= interval) {
+    // save the last time you blinked the LED
+		previousMillis = currentMillis;
+
+		unsigned char signBit = 0;
+
+		if (pos < 0){
+			pos = 0 - pos;
+			signBit = 1;
+		}
+
+		byte4 = lowByte(pos);
+		pos= pos >> 8;
+		byte3 = lowByte(pos);
+		pos= pos >> 8;
+		byte2 = lowByte(pos);
+		pos= pos >> 8;
+		byte1 = pos;
+
+		Wire.beginTransmission(4);
+		Wire.write(signBit); 
+		Wire.write(byte1);
+		Wire.write(byte2);
+		Wire.write(byte3);
+		Wire.write(byte4);
+	               // sends one byte  
+		Wire.endTransmission(); 
+	}
+
+}
