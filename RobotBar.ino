@@ -30,11 +30,15 @@ int move_finished=1;  // Used to check if move is completed
 long initial_homing=-1;  // Used to Home Stepper at startup
 
 unsigned long previousMillis = 0;
+unsigned long previousMillis1 = 0;
+
+unsigned long testMicros = micros();
 const long interval = 100;
 
 unsigned char byte1, byte2, byte3, byte4;
 
 boolean red = true;
+boolean sentData = false;
 
 void setup() {
   Serial.begin(9600);
@@ -46,11 +50,11 @@ void setup() {
   Wire.begin();
   delay(5);
 
-  moveDot();
+  //moveDot();
 
   homeMainStepper();
 
-  stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Faster for regular movements)
+  stepperX.setMaxSpeed(15000.0);      // Set Max Speed of Stepper (Faster for regular movements)
   stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
   stepperY.setMaxSpeed(5000.0);      
   stepperY.setAcceleration(5000.0);
@@ -98,13 +102,27 @@ void homeMainStepper(){
   Serial.print("Stepper is Homing . . . . . . . . . . . ");
 
   while (digitalRead(home_switch)) {  // Make the Stepper move CCW until the switch is activated   
-    stepperX.moveTo(initial_homing);  // Set the position to move to
-    initial_homing--;  // Decrease by 1 for next move if needed
-    stepperX.run();  // Start moving the stepper
-    delay(.01);
-    // Serial.println(stepperX.currentPosition());
-    writeToSlave(stepperX.currentPosition());
+      // Start moving the stepper
 
+    unsigned long currentMillis = micros();
+    if (currentMillis - previousMillis1 >= 500) {
+    // save the last time you blinked the LED
+      previousMillis1 = currentMillis;
+
+      stepperX.moveTo(initial_homing);  // Set the position to move to
+      initial_homing--;  // Decrease by 1 for next move if needed
+      stepperX.run();
+      sentData = true;
+      
+    }
+
+    // unsigned long currentTestMicro = micros();
+    if(sentData){
+       writeToSlave(stepperX.currentPosition());
+    }
+    // Serial.println(currentTestMicro - testMicros);
+    // testMicros = currentTestMicro;
+    // delay(.1);
   }
   Serial.print(initial_homing);
 
@@ -117,7 +135,7 @@ void homeMainStepper(){
     stepperX.moveTo(initial_homing);  
     stepperX.run();
     initial_homing++;
-    delay(.01);
+    delay(1);
   }
   
   stepperX.setCurrentPosition(0);
@@ -155,7 +173,8 @@ void moveToPosition(int pos){
       
     }
 
-    changeColorEverySec();
+    // writeToSlave(stepperX.currentPosition());
+    //changeColorEverySec();
 
     // If move is completed display message on Serial Monitor
     if ((move_finished == 0) && (stepperX.distanceToGo() == 0)) {
@@ -285,10 +304,11 @@ void serialFlush(){
 
 void writeToSlave(long pos){
 
-	unsigned long currentMillis = millis();
-	if (currentMillis - previousMillis >= interval) {
+  sentData = false;
+	unsigned long currentMillis2 = millis();
+	if (currentMillis2 - previousMillis >= interval) {
     // save the last time you blinked the LED
-		previousMillis = currentMillis;
+		previousMillis = currentMillis2;
 
 		unsigned char signBit = 0;
 
