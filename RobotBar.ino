@@ -3,6 +3,7 @@ Drink1: 0
 Drink2: 8750
 Drink3: 17600
 Drink4: 26600
+Drink Home Positon: 4000
 */
 
 char BluetoothData; // the data received from bluetooth serial link
@@ -54,7 +55,7 @@ void setup() {
 
   homeMainStepper();
 
-  stepperX.setMaxSpeed(15000.0);      // Set Max Speed of Stepper (Faster for regular movements)
+  stepperX.setMaxSpeed(10000.0);      // Set Max Speed of Stepper (Faster for regular movements)
   stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
   stepperY.setMaxSpeed(5000.0);      
   stepperY.setAcceleration(5000.0);
@@ -79,15 +80,9 @@ void loop() {
 //    if(BluetoothData=='G') cocktail1();
 //    if(BluetoothData=='R') cocktail2();
 //    if(BluetoothData=='V') cocktail3();
-
-
     
   }
-
-
 }
-
-
 
 //List of Methods used.. Can be put in separate files
 //*****************************************************************************************************************************************************
@@ -173,7 +168,7 @@ void moveToPosition(int pos){
       
     }
 
-    // writeToSlave(stepperX.currentPosition());
+    writeToSlave(stepperX.currentPosition());
     //changeColorEverySec();
 
     // If move is completed display message on Serial Monitor
