@@ -39,16 +39,13 @@ boolean sentData = false;
 void setup() {
   Serial.begin(9600);
   pinMode(home_switch_x, INPUT_PULLUP);
-  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);  // GRB ordering is assumed
-  FastLED.setBrightness(100);
-  FastLED.clear();
-  FastLED.show();
+  pinMode(home_switch_y, INPUT_PULLUP);
   Wire.begin();
   delay(5);
 
   //moveDot();
 
-  homeMainStepper();
+  homeSteppers();
 
   stepperX.setMaxSpeed(10000.0);      // Set Max Speed of Stepper (Faster for regular movements)
   stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
@@ -80,51 +77,6 @@ void loop() {
 }
 
 //List of Methods used.. Can be put in separate files
-//*****************************************************************************************************************************************************
-void homeMainStepper(){
-  setLEDsHoming();
-     //  Set Max Speed and Acceleration of each Steppers at startup for homing
-  //Todo: not sure if this does anything here...
-  stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
-  stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
-
-  Serial.print("Stepper is Homing . . . . . . . . . . . ");
-
-  while (digitalRead(home_switch_x)) {  // Make the Stepper move CCW until the switch is activated   
-    unsigned long currentMillis = micros();
-    if (currentMillis - previousMillis1 >= 500) {
-      previousMillis1 = currentMillis;
-      stepperX.moveTo(initial_homing);  // Set the position to move to
-      initial_homing--;  // Decrease by 1 for next move if needed
-      stepperX.run();
-      sentData = true;
-    }
-    if(sentData){
-       writeToSlave(stepperX.currentPosition());
-    }
-  }
-  Serial.print(initial_homing);
-
-  //********* Todo: not sure what these lines are doing *********
-  stepperX.setCurrentPosition(0);  // Set the current position as zero for now
-  stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
-  stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
-  //*************************************************************
-
-  initial_homing=1;
-
-  while (!digitalRead(home_switch_x)) { // Make the Stepper move CW until the switch is deactivated
-    stepperX.moveTo(initial_homing);  
-    stepperX.run();
-    initial_homing++;
-    delay(1);
-  }
-  stepperX.setCurrentPosition(0);
-  Serial.println("Homing Completed");
-  Serial.println("");
-  setLEDsDoneHoming();
-}
-
 //*****************************************************************************************************************************************************
 
 void userEnteredPosition(){
