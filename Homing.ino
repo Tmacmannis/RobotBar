@@ -51,7 +51,7 @@ void homeXStepper(){
 void homeYStepper(){
 
 	//move to correct position first.. Add back after initial direction test.. 
-	//moveToPosition(4000);
+	moveToPosition(4000);
 
 	//Todo: not sure if this does anything here...
 	stepperY.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
@@ -89,6 +89,23 @@ void homeYStepper(){
     initial_homing++;
     delay(1);
   }
+
+  move_finished=0;
+  stepperY.moveTo(750);
+
+  while(move_finished == 0){
+
+    // Check if the Stepper has reached desired position
+    if ((stepperY.distanceToGo() != 0)) {
+      stepperY.run();  // Move Stepper into position 
+    }
+
+    // If move is completed display message on Serial Monitor
+    if ((move_finished == 0) && (stepperY.distanceToGo() == 0)) {
+      move_finished=1;  // Reset move variable
+      }
+  }
+
   stepperY.setCurrentPosition(0);
   Serial.println("Y Axis Homing Completed");
   Serial.println("");

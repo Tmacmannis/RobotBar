@@ -7,7 +7,6 @@ Drink Home Positon: 4000
 */
 
 char BluetoothData; // the data received from bluetooth serial link
-char EnteredData;
 #include "AccelStepper.h" 
 #include <Wire.h>
 
@@ -15,8 +14,8 @@ char EnteredData;
 #define home_switch_y 10
 
 // AccelStepper Setup
-AccelStepper stepperX(1, 4, 5);   // 1 = Easy Driver interface, 4 = STEP Pin, 5 = DIR Pin
-AccelStepper stepperY(1, 2, 3);
+AccelStepper stepperX(1, 15, 14);   // 1 = Easy Driver interface, 4 = STEP Pin, 5 = DIR Pin
+AccelStepper stepperY(1, 17, 16);
 
 // Define the Pins used
 
@@ -57,22 +56,12 @@ void loop() {
 
   //Process info coming from bluetooth app
   if (Serial.available()){
-    TravelX= Serial.parseInt(); //Get next character from bluetooth
-
-    switch(TravelX){
-      case 1: 
-        Serial.println("one was entered");
-        cocktail1();
-      break;
-      case 2:
-        Serial.println("two was entered");
-        cocktail2();
-      break;
-    }
-//    if(BluetoothData=='G') cocktail1();
-//    if(BluetoothData=='R') cocktail2();
-//    if(BluetoothData=='V') cocktail3();
+    BluetoothData=Serial.read(); //Get next character from bluetooth
+    Serial.print(BluetoothData);
     
+    if(BluetoothData=='G') cocktail1();
+    if(BluetoothData=='R') cocktail2();
+    if(BluetoothData=='V') cocktail3();
   }
 }
 
