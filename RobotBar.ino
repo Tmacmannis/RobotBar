@@ -37,6 +37,7 @@ boolean sentData = false;
 
 void setup() {
   Serial.begin(9600);
+  Serial1.begin(9600);
   pinMode(home_switch_x, INPUT_PULLUP);
   pinMode(home_switch_y, INPUT_PULLUP);
   Wire.begin();
@@ -46,7 +47,7 @@ void setup() {
 
   homeSteppers();
 
-  stepperX.setMaxSpeed(10000.0);      // Set Max Speed of Stepper (Faster for regular movements)
+  stepperX.setMaxSpeed(15000.0);      // Set Max Speed of Stepper (Faster for regular movements)
   stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
   stepperY.setMaxSpeed(5000.0);      
   stepperY.setAcceleration(5000.0);
@@ -55,11 +56,13 @@ void setup() {
 void loop() {
 
   //Process info coming from bluetooth app
-  if (Serial.available()){
-    BluetoothData=Serial.read(); //Get next character from bluetooth
-    Serial.print(BluetoothData);
+  if (Serial1.available()){
+    BluetoothData=Serial1.read(); //Get next character from bluetooth
+    Serial1.print(BluetoothData);
     
-    if(BluetoothData=='G') cocktail1();
+    if(BluetoothData=='G'){
+      cocktail1();
+    } 
     if(BluetoothData=='R') cocktail2();
     if(BluetoothData=='V') cocktail3();
   }
@@ -209,8 +212,8 @@ void cocktail3(){
 }
 
 void serialFlush(){
-  while(Serial.available() > 0) {
-    char t = Serial.read();
+  while(Serial1.available() > 0) {
+    char t = Serial1.read();
   }
 }
 
