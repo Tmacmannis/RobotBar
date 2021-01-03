@@ -1,58 +1,78 @@
-#include <Wire.h>
+#include "I2CTransfer.h"
+#include <FastLED.h>
 
-unsigned long recomb;
+#define DATA_PIN    5
+#define LED_TYPE    WS2812B
+#define COLOR_ORDER GRB
+#define NUM_LEDS    63
+#define BRIGHTNESS  96
 
-unsigned char byte0, byte1, byte2, byte3, byte4;
+CRGB leds[NUM_LEDS];
 
-void setup()
-{
-  Wire.begin(4);                // join i2c bus with address #4
-  Wire.onReceive(receiveEvent); // register event
-  Serial.begin(9600);           // start serial for output
+
+I2CTransfer myTransfer;
+
+struct __attribute__((__packed__)) STRUCT {
+    byte arr[8];       // 8 bytes
+    int32_t currentMode;          // 4 bytes
+    int32_t currentPos;             // 4 bytes
+} testStruct;
+
+unsigned long previousMillis = 0;
+
+
+/////////////////////////////////////////////////////////////////// Callbacks
+void hi() {
+    myTransfer.rxObj(testStruct);
+    //  Serial.print(testStruct.z);
+}
+///////////////////////////////////////////////////////////////////
+
+
+void setup() {
+    Serial.begin(9600);
+    Wire.begin(0);
+    pinMode(13, OUTPUT);
+
+    FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+    FastLED.setBrightness(BRIGHTNESS);
+
+    functionPtr callbackArr[] = { hi };
+
+    ///////////////////////////////////////////////////////////////// Config Parameters
+    configST myConfig;
+    myConfig.debug        = true;
+    myConfig.callbacks    = callbackArr;
+    myConfig.callbacksLen = sizeof(callbackArr) / sizeof(functionPtr);
+    /////////////////////////////////////////////////////////////////
+
+    myTransfer.begin(Wire, myConfig);
 }
 
-void loop()
-{
-  delay(100);
-  // Serial.println("hello");
-}
 
-// function that executes whenever data is received from master
-// this function is registered as an event, see setup()
-void receiveEvent(int howMany)
-{
-  //Serial.print("received: ");
-  //Serial.println(howMany);
-  while(0 < Wire.available()) // loop through all but the last
-  {
+void loop() {
+    // Do nothing
+    Serial.print("testing");
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousMillis >= 100) {
+        previousMillis = currentMillis;
+        Serial.print("current mode: ");
+        Serial.print(testStruct.currentMode);
+        Serial.print(" current position: ");
+        Serial.println(testStruct.currentPos);
 
-    byte0 = Wire.read();
-
-    switch(byte0){
-      case 1:
-        //Serial.println("1 sent!");
-        break;
-      case 0:
-        //Serial.println("0 sent!");
-        break;
+        if(testStruct.currentMode == 1) {
+            for(int i = 0; i < NUM_LEDS; i++) {
+                leds[i] = CRGB::Red;
+            }
+            FastLED.show();
+        } else {
+            for(int i = 0; i < NUM_LEDS; i++) {
+                leds[i] = CRGB::Green;
+            }
+            FastLED.show();
+        }
     }
-    
 
 
-    
-    byte1 = Wire.read(); // receive byte as a character
-    byte2 = Wire.read();
-    byte3 = Wire.read();
-    byte4 = Wire.read();
-
-
-    recomb = byte1 ;
-    recomb = (recomb << 8) | byte2 ;
-    recomb = (recomb << 8) | byte3 ;
-    recomb = (recomb << 8) | byte4 ;
-    Serial.println(recomb);         // print the character
-  }
-  //int x = Wire.read();    // receive byte as an integer
-  //Serial.println(x);
-  //Serial.println();// print the integer
 }
