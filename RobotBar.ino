@@ -6,34 +6,35 @@ Drink4: 26600
 Drink Home Positon: 4000
 */
 
-char BluetoothData; // the data received from bluetooth serial link
-#include "AccelStepper.h"
+char BluetoothData;  // the data received from bluetooth serial link
 #include <Wire.h>
-#include "I2CTransfer.h"
 
-#define home_switch_x 13 // Pin 9 connected to Home Switch (MicroSwitch)
+#include "AccelStepper.h"
+#include "SerialTransfer.h"
+
+#define home_switch_x 13  // Pin 9 connected to Home Switch (MicroSwitch)
 #define home_switch_y 12
 
 // AccelStepper Setup
-AccelStepper stepperX(1, 15, 14);   // 1 = Easy Driver interface, 4 = STEP Pin, 5 = DIR Pin
+AccelStepper stepperX(1, 15, 14);  // 1 = Easy Driver interface, 4 = STEP Pin, 5 = DIR Pin
 AccelStepper stepperY(1, 19, 18);
 
-I2CTransfer myTransfer;
+SerialTransfer myTransfer;
 
 struct __attribute__((__packed__)) STRUCT {
-    byte arr[8];       // 8 bytes
-    int32_t currentMode;          // 4 bytes
-    int32_t currentPos;             // 4 bytes
+    byte arr[8];          // 8 bytes
+    int32_t currentMode;  // 4 bytes
+    int32_t currentPos;   // 4 bytes
 } testStruct;
 
-// TaskHandle_t Task1;
+TaskHandle_t Task1;
 
 // Define the Pins used
 
 // Stepper Travel Variables
-long TravelX;  // Used to store the X value entered in the Serial Monitor
-int move_finished = 1; // Used to check if move is completed
-long initial_homing = -1; // Used to Home Stepper at startup
+long TravelX;              // Used to store the X value entered in the Serial Monitor
+int move_finished = 1;     // Used to check if move is completed
+long initial_homing = -1;  // Used to Home Stepper at startup
 
 unsigned long previousMillis = 0;
 unsigned long previousMillis1 = 0;
@@ -51,10 +52,9 @@ boolean steppersCalibrated = false;
 
 int testNum = 0;
 
-
 void setup() {
     Serial.begin(9600);
-    Serial1.begin(9600);
+    Serial2.begin(115200);
     pinMode(home_switch_x, INPUT_PULLUP);
     pinMode(home_switch_y, INPUT_PULLUP);
 
@@ -63,11 +63,7 @@ void setup() {
     stepperX.setPinsInverted(false, false, true);
     stepperX.enableOutputs();
 
-    Wire.begin();
-    myTransfer.begin(Wire);
-
-
-
+    myTransfer.begin(Serial2);
 
     // testStruct.currentMode = 0;
     myTransfer.sendDatum(testStruct);
@@ -79,42 +75,39 @@ void setup() {
 
     //moveDot();
 
-    stepperX.setMaxSpeed(15000.0);      // Set Max Speed of Stepper (Faster for regular movements)
+    stepperX.setMaxSpeed(15000.0);     // Set Max Speed of Stepper (Faster for regular movements)
     stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
     stepperY.setMaxSpeed(5000.0);
     stepperY.setAcceleration(5000.0);
 
-    // xTaskCreatePinnedToCore(
-    // Task1code,   /* Task function. */
-    // "Task1",     /* name of task. */
-    // 10000,       /* Stack size of task */
-    // NULL,        /* parameter of the task */
-    // 1,           /* priority of the task */
-    // &Task1,      /* Task handle to keep track of created task */
-    // 0);          /* pin task to core 0 */
+    xTaskCreatePinnedToCore(
+        Task1code, /* Task function. */
+        "Task1",   /* name of task. */
+        10000,     /* Stack size of task */
+        NULL,      /* parameter of the task */
+        1,         /* priority of the task */
+        &Task1,    /* Task handle to keep track of created task */
+        0);        /* pin task to core 0 */
     delay(500);
 
     // homeSteppers();
     delay(500);
     stepperX.disableOutputs();
-
-
 }
 
 void loop() {
-
-    updateNano();
+    // updateNano();
 
     //Process info coming from bluetooth app
     if (Serial.available()) {
-        BluetoothData = Serial.read(); //Get next character from bluetooth
+        BluetoothData = Serial.read();  //Get next character from bluetooth
         Serial.print(BluetoothData);
         steppersCalibrated = false;
-        if(BluetoothData == 'G') {
+        if (BluetoothData == 'G') {
             cocktail1();
         }
-        if(BluetoothData == 'R') cocktail2();
-        if(BluetoothData == 'V') cocktail3();
+        if (BluetoothData == 'R') cocktail2();
+        if (BluetoothData == 'V') cocktail3();
     }
 }
 
@@ -122,7 +115,7 @@ void loop() {
 //*****************************************************************************************************************************************************
 
 void userEnteredPosition() {
-    while (Serial.available() > 0) { // Check if values are available in the Serial Buffer
+    while (Serial.available() > 0) {  // Check if values are available in the Serial Buffer
         TravelX = Serial.parseInt();
         Serial.print("Moving stepper into position: ");
         Serial.println(TravelX);
@@ -134,12 +127,10 @@ void userEnteredPosition() {
 //*****************************************************************************************************************************************************
 
 void moveToPosition(int pos) {
-
     move_finished = 0;
     stepperX.moveTo(pos);
 
-    while(move_finished == 0) {
-
+    while (move_finished == 0) {
         // Check if the Stepper has reached desired position
         unsigned long currentMillis = micros();
         if (currentMillis - previousMoveMillis >= 10) {
@@ -147,31 +138,25 @@ void moveToPosition(int pos) {
             if ((stepperX.distanceToGo() != 0)) {
                 stepperX.run();  // Move Stepper into position
             }
-        }else{
+        } else {
             updateNano();
         }
-
-
-        
 
         // If move is completed display message on Serial Monitor
         if ((move_finished == 0) && (stepperX.distanceToGo() == 0)) {
             Serial.println("");
-            move_finished = 1; // Reset move variable
+            move_finished = 1;  // Reset move variable
         }
     }
-
 }
 
 //*****************************************************************************************************************************************************
 
 void pourOneShot() {
-
     move_finished = 0;
     stepperY.moveTo(4100);
 
-    while(move_finished == 0) {
-
+    while (move_finished == 0) {
         // Check if the Stepper has reached desired position
         if ((stepperY.distanceToGo() != 0)) {
             stepperY.run();  // Move Stepper into position
@@ -179,18 +164,16 @@ void pourOneShot() {
 
         // If move is completed display message on Serial Monitor
         if ((move_finished == 0) && (stepperY.distanceToGo() == 0)) {
-            move_finished = 1; // Reset move variable
+            move_finished = 1;  // Reset move variable
         }
     }
-
 
     delay(1000);
 
     move_finished = 0;
     stepperY.moveTo(0);
 
-    while(move_finished == 0) {
-
+    while (move_finished == 0) {
         // Check if the Stepper has reached desired position
         if ((stepperY.distanceToGo() != 0)) {
             stepperY.run();  // Move Stepper into position
@@ -199,7 +182,7 @@ void pourOneShot() {
         // If move is completed display message on Serial Monitor
         if ((move_finished == 0) && (stepperY.distanceToGo() == 0)) {
             Serial.println("Shot Poured");
-            move_finished = 1; // Reset move variable
+            move_finished = 1;  // Reset move variable
         }
     }
 }
@@ -211,7 +194,6 @@ void pourOneShot() {
 void drink1() {
     moveToPosition(0);
     pourOneShot();
-
 }
 
 //*****************************************************************************************************************************************************
@@ -261,7 +243,6 @@ void cocktail2() {
     Serial.print("Done!");
     serialFlush();
     stepperX.disableOutputs();
-
 }
 
 void cocktail3() {
@@ -277,53 +258,20 @@ void cocktail3() {
 }
 
 void serialFlush() {
-    while(Serial1.available() > 0) {
+    while (Serial1.available() > 0) {
         char t = Serial1.read();
     }
 }
 
-void updateNano() {
+void Task1code(void* pvParameters) {
+    Serial.print("Task1 running on core ");
+    Serial.println(xPortGetCoreID());
 
-    // unsigned long currentMillis = millis();
-    // if (currentMillis - previousSendNanoMillis >= 100) {
-    //     previousSendNanoMillis = currentMillis;
-    //     Serial.print("core 0 checking in pos: ");
-    //     Serial.println(testNum);
-    //     testStruct.currentPos = testNum++;
-    //     myTransfer.sendDatum(testStruct);
-    // }
-
-
-    unsigned long currentMillis = millis();
-    if (currentMillis - previousSendNanoMillis >= 1000) {
-        unsigned long currentMillisTestWrite = micros();
-        previousSendNanoMillis = currentMillis;
+    for (;;) {
+        unsigned long currentMillis = micros();
         testStruct.currentPos = stepperX.currentPosition();
-        if(testStruct.currentPos % 10 == 0) {
-            testStruct.currentMode++;
-        }
         myTransfer.sendDatum(testStruct);
-        testWriteTime = micros() - currentMillisTestWrite;
-        Serial.print("write to nano took: ");
-        Serial.println(testWriteTime);
+        Serial.println(micros() - currentMillis);
+        delay(28);
     }
-
-
 }
-
-// void Task1code( void *pvParameters ) {
-//     Serial.print("Task1 running on core ");
-//     Serial.println(xPortGetCoreID());
-//     int testNum = 0;
-
-//     for(;;) {
-//         unsigned long currentMillis = millis();
-//         if (currentMillis - previousSendNanoMillis >= 100) {
-//             previousSendNanoMillis = currentMillis;
-//             Serial.print("core 0 checking in pos: ");
-//             Serial.println(testNum);
-//             testStruct.currentPos = testNum++;
-//             myTransfer.sendDatum(testStruct);
-//         }
-//     }
-// }

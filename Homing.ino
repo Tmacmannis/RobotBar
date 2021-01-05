@@ -1,6 +1,5 @@
 boolean homeSteppers() {
-    // testStruct.currentMode = 1;
-    // updateNano();
+    testStruct.currentMode = 1;
     while(!steppersCalibrated) {
         homeXStepper();
         delay(250);
@@ -14,15 +13,13 @@ boolean homeSteppers() {
 
         if(homeYStepper()) {
             steppersCalibrated = true;
-            // testStruct.currentMode = 0;
-            // updateNano();
+            testStruct.currentMode = 0;
             return true;
         } else {
             Serial.println("Y Axis Homing Failed!!!!");
         }
     }
-    // testStruct.currentMode = 0;
-    // updateNano();
+    testStruct.currentMode = 0;
     return false;
 
 }
