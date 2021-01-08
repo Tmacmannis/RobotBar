@@ -2,11 +2,13 @@
 Robotic Bar
 
 
-More info to come.. 
+Positions:
+Drink1: 0
+Drink2: 8750
+Drink3: 17600
+Drink4: 26600
+Drink Home Positon: 4000
 
 
-Git Commands
-1. Make changes to file
-2. "git status" to see changes 
-3. "git commit -am "<message>" to commit code. 
-4. "git push" to push to repo 
+
+
