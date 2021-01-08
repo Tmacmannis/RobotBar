@@ -1,12 +1,4 @@
-/*
-Drink1: 0
-Drink2: 8750
-Drink3: 17600
-Drink4: 26600
-Drink Home Positon: 4000
-*/
-
-char BluetoothData;  // the data received from bluetooth serial link
+#include <FastLED.h>
 #include <Wire.h>
 
 #include "AccelStepper.h"
@@ -14,10 +6,19 @@ char BluetoothData;  // the data received from bluetooth serial link
 
 #define home_switch_x 13  // Pin 9 connected to Home Switch (MicroSwitch)
 #define home_switch_y 12
+#define DATA_PIN 22
+#define LED_TYPE WS2812B
+#define COLOR_ORDER GRB
+#define NUM_LEDS 63
+#define BRIGHTNESS 200
+
+CRGB leds[NUM_LEDS];
 
 // AccelStepper Setup
 AccelStepper stepperX(1, 15, 14);  // 1 = Easy Driver interface, 4 = STEP Pin, 5 = DIR Pin
 AccelStepper stepperY(1, 19, 18);
+
+int currentMode;
 
 SerialTransfer myTransfer;
 
@@ -29,8 +30,6 @@ struct __attribute__((__packed__)) STRUCT {
 
 TaskHandle_t Task1;
 
-// Define the Pins used
-
 // Stepper Travel Variables
 long TravelX;              // Used to store the X value entered in the Serial Monitor
 int move_finished = 1;     // Used to check if move is completed
@@ -38,19 +37,9 @@ long initial_homing = -1;  // Used to Home Stepper at startup
 
 unsigned long previousMillis = 0;
 unsigned long previousMillis1 = 0;
-unsigned long previousMoveMillis = 0;
-unsigned long previousSendNanoMillis = 0;
-
-unsigned long testWriteTime = 0;
-
-unsigned long testMicros = micros();
-const long interval = 100;
-
-int currentPositionTest;
 
 boolean steppersCalibrated = false;
-
-int testNum = 0;
+char BluetoothData;  // the data received from bluetooth serial link
 
 void setup() {
     Serial.begin(9600);
@@ -58,22 +47,16 @@ void setup() {
     pinMode(home_switch_x, INPUT_PULLUP);
     pinMode(home_switch_y, INPUT_PULLUP);
 
-    // pinMode(18, OUTPUT);
+    FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+    FastLED.setBrightness(BRIGHTNESS);
+
     stepperX.setEnablePin(5);
     stepperX.setPinsInverted(false, false, true);
     stepperX.enableOutputs();
 
     myTransfer.begin(Serial2);
 
-    // testStruct.currentMode = 0;
-    myTransfer.sendDatum(testStruct);
-
     delay(2000);
-
-    Serial.print("core num: ");
-    Serial.println(xPortGetCoreID());
-
-    //moveDot();
 
     stepperX.setMaxSpeed(15000.0);     // Set Max Speed of Stepper (Faster for regular movements)
     stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
@@ -90,14 +73,10 @@ void setup() {
         0);        /* pin task to core 0 */
     delay(500);
 
-    // homeSteppers();
-    delay(500);
     stepperX.disableOutputs();
 }
 
 void loop() {
-    // updateNano();
-
     //Process info coming from bluetooth app
     if (Serial.available()) {
         BluetoothData = Serial.read();  //Get next character from bluetooth
@@ -132,17 +111,9 @@ void moveToPosition(int pos) {
 
     while (move_finished == 0) {
         // Check if the Stepper has reached desired position
-        unsigned long currentMillis = micros();
-        if (currentMillis - previousMoveMillis >= 10) {
-            previousMoveMillis = currentMillis;
-            if ((stepperX.distanceToGo() != 0)) {
-                stepperX.run();  // Move Stepper into position
-            }
-        } else {
-            updateNano();
+        if ((stepperX.distanceToGo() != 0)) {
+            stepperX.run();  // Move Stepper into position
         }
-
-        // If move is completed display message on Serial Monitor
         if ((move_finished == 0) && (stepperX.distanceToGo() == 0)) {
             Serial.println("");
             move_finished = 1;  // Reset move variable
@@ -268,10 +239,31 @@ void Task1code(void* pvParameters) {
     Serial.println(xPortGetCoreID());
 
     for (;;) {
-        unsigned long currentMillis = micros();
-        testStruct.currentPos = stepperX.currentPosition();
-        myTransfer.sendDatum(testStruct);
-        Serial.println(micros() - currentMillis);
+        
         delay(28);
+
+        // unsigned long currentMillis = micros();
+        // testStruct.currentPos = stepperX.currentPosition();
+        // myTransfer.sendDatum(testStruct);
+        // Serial.println(micros() - currentMillis);
+        // delay(28);
+
+        if (currentMode == 1) {
+            for (int i = 0; i < NUM_LEDS; i++) {
+                leds[i] = CRGB::Red;
+            }
+            FastLED.show();
+        } else if(currentMode == 0){
+            
+            int followPos = map(stepperX.currentPosition(), 0, 26600, 4, 45);
+            leds[followPos] = CRGB::Green;
+            leds[followPos + 1] = CRGB::Green;
+            leds[followPos + 2] = CRGB::Green;
+            leds[followPos + 3] = CRGB::Green;
+            leds[followPos + 4] = CRGB::Green;
+            fadeToBlackBy( leds, NUM_LEDS, 30);
+
+            FastLED.show();
+        } else{}
     }
 }
