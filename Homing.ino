@@ -1,5 +1,4 @@
 boolean homeSteppers() {
-    // testStruct.currentMode = 1;
     currentMode = 1;
     while(!steppersCalibrated) {
         homeXStepper();
@@ -14,14 +13,12 @@ boolean homeSteppers() {
 
         if(homeYStepper()) {
             steppersCalibrated = true;
-            // testStruct.currentMode = 0;
             currentMode = 0;
             return true;
         } else {
             Serial.println("Y Axis Homing Failed!!!!");
         }
     }
-    // testStruct.currentMode = 0;
     currentMode = 0;
     return false;
 
@@ -32,7 +29,7 @@ int homeXStepper() {
     stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
     int inital_homing_test = -1;
     int finalXMovement = 0;
-    Serial.print("X Stepper is Homing . . . . . . . . . . . ");
+    Serial.println("X Stepper is Homing . . . . . . . . . . . ");
     inital_homing_test = -1;
     while (true) {  // Make the Stepper move CCW until the switch is activated
         unsigned long currentMillis = micros();
@@ -49,7 +46,7 @@ int homeXStepper() {
 
     finalXMovement = inital_homing_test;
 
-    Serial.print(inital_homing_test);
+    Serial.println(inital_homing_test);
 
     stepperX.setCurrentPosition(0);  // Set the current position as zero for now
 

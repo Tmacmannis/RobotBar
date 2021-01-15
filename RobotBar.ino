@@ -54,11 +54,9 @@ void setup() {
     stepperX.setPinsInverted(false, false, true);
     stepperX.enableOutputs();
 
-    stepperY.setEnablePin(17);
+    stepperY.setEnablePin(21);
     stepperY.setPinsInverted(false, false, true);
     stepperY.enableOutputs();
-
-    myTransfer.begin(Serial2);
 
     delay(2000);
 
@@ -78,7 +76,7 @@ void setup() {
     delay(500);
 
     stepperX.disableOutputs();
-    // stepperY.disableOutputs();
+    stepperY.disableOutputs();
 }
 
 void loop() {
@@ -169,28 +167,28 @@ void pourOneShot() {
 
 void drink1() {
     moveToPosition(0);
-    pourOneShot();
+    // pourOneShot();
 }
 
 //*****************************************************************************************************************************************************
 
 void drink2() {
     moveToPosition(8750);
-    pourOneShot();
+    // pourOneShot();
 }
 
 //*****************************************************************************************************************************************************
 
 void drink3() {
     moveToPosition(17600);
-    pourOneShot();
+    // pourOneShot();
 }
 
 //*****************************************************************************************************************************************************
 
 void drink4() {
     moveToPosition(26600);
-    pourOneShot();
+    // pourOneShot();
 }
 
 //*****************************************************************************************************************************************************
@@ -251,12 +249,6 @@ void Task1code(void* pvParameters) {
 
     for (;;) {
         delay(28);
-
-        // unsigned long currentMillis = micros();
-        // testStruct.currentPos = stepperX.currentPosition();
-        // myTransfer.sendDatum(testStruct);
-        // Serial.println(micros() - currentMillis);
-        // delay(28);
 
         if (currentMode == 1) {
             for (int i = 0; i < NUM_LEDS; i++) {
