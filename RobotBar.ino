@@ -54,6 +54,10 @@ void setup() {
     stepperX.setPinsInverted(false, false, true);
     stepperX.enableOutputs();
 
+    stepperY.setEnablePin(17);
+    stepperY.setPinsInverted(false, false, true);
+    stepperY.enableOutputs();
+
     myTransfer.begin(Serial2);
 
     delay(2000);
@@ -74,6 +78,7 @@ void setup() {
     delay(500);
 
     stepperX.disableOutputs();
+    // stepperY.disableOutputs();
 }
 
 void loop() {
@@ -192,6 +197,7 @@ void drink4() {
 
 void cocktail1() {
     stepperX.enableOutputs();
+    stepperY.enableOutputs();
     Serial.println("Gin & Tonic");
     homeSteppers();
     drink1();
@@ -200,12 +206,14 @@ void cocktail1() {
     Serial.print("Done!");
     serialFlush();
     stepperX.disableOutputs();
+    stepperY.disableOutputs();
 }
 
 //*****************************************************************************************************************************************************
 
 void cocktail2() {
     stepperX.enableOutputs();
+    stepperY.enableOutputs();
     Serial.println("Rum & Coke");
     homeSteppers();
     drink2();
@@ -214,10 +222,12 @@ void cocktail2() {
     Serial.print("Done!");
     serialFlush();
     stepperX.disableOutputs();
+    stepperY.disableOutputs();
 }
 
 void cocktail3() {
     stepperX.enableOutputs();
+    stepperY.enableOutputs();
     Serial.println("Vodka Cranberry");
     homeSteppers();
     drink1();
@@ -226,6 +236,7 @@ void cocktail3() {
     Serial.print("Done!");
     serialFlush();
     stepperX.disableOutputs();
+    stepperY.disableOutputs();
 }
 
 void serialFlush() {
@@ -239,7 +250,6 @@ void Task1code(void* pvParameters) {
     Serial.println(xPortGetCoreID());
 
     for (;;) {
-        
         delay(28);
 
         // unsigned long currentMillis = micros();
@@ -253,17 +263,17 @@ void Task1code(void* pvParameters) {
                 leds[i] = CRGB::Red;
             }
             FastLED.show();
-        } else if(currentMode == 0){
-            
+        } else if (currentMode == 0) {
             int followPos = map(stepperX.currentPosition(), 0, 26600, 4, 45);
             leds[followPos] = CRGB::Green;
             leds[followPos + 1] = CRGB::Green;
             leds[followPos + 2] = CRGB::Green;
             leds[followPos + 3] = CRGB::Green;
             leds[followPos + 4] = CRGB::Green;
-            fadeToBlackBy( leds, NUM_LEDS, 30);
+            fadeToBlackBy(leds, NUM_LEDS, 30);
 
             FastLED.show();
-        } else{}
+        } else {
+        }
     }
 }
