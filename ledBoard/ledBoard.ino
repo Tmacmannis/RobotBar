@@ -2,7 +2,7 @@
 
 #include "SerialTransfer.h"
 
-#define DATA_PIN 6
+#define DATA_PIN 13
 #define LED_TYPE WS2812B
 #define COLOR_ORDER GRB
 #define NUM_LEDS 63
@@ -10,12 +10,15 @@
 
 CRGB leds[NUM_LEDS];
 
+int prevBrightness = 0;
+
 SerialTransfer myTransfer;
 
 struct __attribute__((__packed__)) STRUCT {
     byte arr[8];          // 8 bytes
     int32_t currentMode;  // 4 bytes
     int32_t currentPos;   // 4 bytes
+    int32_t brightness;   // 4 bytes
 } testStruct;
 
 unsigned long previousMillis = 0;
@@ -46,6 +49,15 @@ void loop() {
         // Serial.print(testStruct.currentMode);
         Serial.print(" current position: ");
         Serial.println(testStruct.currentPos);
+        Serial.print(" current brightness: ");
+        Serial.println(testStruct.brightness);
+
+        //check brightness
+        if(testStruct.brightness != prevBrightness){
+            FastLED.setBrightness(map(testStruct.brightness, 0, 100, 0, 255));
+            prevBrightness = testStruct.brightness;
+        }
+
 
         if (testStruct.currentMode == 1) {
             for (int i = 0; i < NUM_LEDS; i++) {

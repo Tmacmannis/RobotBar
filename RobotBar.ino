@@ -1,8 +1,8 @@
 #include <FastLED.h>
 #include <Wire.h>
-
 #include "AccelStepper.h"
 #include "SerialTransfer.h"
+#include "EspMQTTClient.h"
 
 #define home_switch_x 13  // Pin 9 connected to Home Switch (MicroSwitch)
 #define home_switch_y 12
@@ -11,6 +11,16 @@
 #define COLOR_ORDER GRB
 #define NUM_LEDS 63
 #define BRIGHTNESS 200
+
+EspMQTTClient client(
+    "Bill Wi the Science Fi",
+    "baxtercosmo25",
+    "192.168.0.114",                                                     // MQTT Broker server ip
+    "tim",                                                               // Can be omitted if not needed
+    "14Q4YsC6YrXl",                                                      // Can be omitted if not needed
+    "vahze5ieGhoh9ieshae3Ingohk7taMoo2zoakohxejoopoZoh1Ahthae5einahK2",  // Client name that uniquely identify your device
+    1883                                                                 // The MQTT port, default to 1883. this line can be omitted
+);
 
 CRGB leds[NUM_LEDS];
 
@@ -26,6 +36,7 @@ struct __attribute__((__packed__)) STRUCT {
     byte arr[8];          // 8 bytes
     int32_t currentMode;  // 4 bytes
     int32_t currentPos;   // 4 bytes
+    int32_t brightness;   // 4 bytess
 } testStruct;
 
 TaskHandle_t Task1;
@@ -40,12 +51,18 @@ unsigned long previousMillis1 = 0;
 
 boolean steppersCalibrated = false;
 char BluetoothData;  // the data received from bluetooth serial link
+boolean drinkSelected = false;
+int currentDrink = 0;
 
 void setup() {
     Serial.begin(9600);
     Serial2.begin(115200);
     pinMode(home_switch_x, INPUT_PULLUP);
     pinMode(home_switch_y, INPUT_PULLUP);
+
+    client.enableDebuggingMessages();                                           // Enable debugging messages sent to serial output
+    client.enableHTTPWebUpdater();                                              // Enable the web updater. User and password default to values of MQTTUsername and MQTTPassword. These can be overrited with enableHTTPWebUpdater("user", "password").
+    client.enableLastWillMessage("TestClient/lastwill", "I am going offline");  // You can activate the retain flag by setting the third parameter to true 
 
     FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
     FastLED.setBrightness(BRIGHTNESS);
@@ -57,6 +74,8 @@ void setup() {
     stepperY.setEnablePin(21);
     stepperY.setPinsInverted(false, false, true);
     stepperY.enableOutputs();
+
+    myTransfer.begin(Serial2);
 
     delay(2000);
 
@@ -80,6 +99,28 @@ void setup() {
 }
 
 void loop() {
+
+    if (drinkSelected) {
+        if (currentDrink == 1) {
+            Serial.print("main task running on core ");
+            Serial.println(xPortGetCoreID());
+            steppersCalibrated = false;
+            cocktail1();
+        }
+
+        if (currentDrink == 2) {
+            Serial.print("main task running on core ");
+            Serial.println(xPortGetCoreID());
+            steppersCalibrated = false;
+            cocktail2();
+        }
+
+        drinkSelected = false;
+    }
+
+    
+
+
     //Process info coming from bluetooth app
     if (Serial.available()) {
         BluetoothData = Serial.read();  //Get next character from bluetooth
@@ -250,22 +291,48 @@ void Task1code(void* pvParameters) {
     for (;;) {
         delay(28);
 
-        if (currentMode == 1) {
-            for (int i = 0; i < NUM_LEDS; i++) {
-                leds[i] = CRGB::Red;
-            }
-            FastLED.show();
-        } else if (currentMode == 0) {
-            int followPos = map(stepperX.currentPosition(), 0, 26600, 4, 45);
-            leds[followPos] = CRGB::Green;
-            leds[followPos + 1] = CRGB::Green;
-            leds[followPos + 2] = CRGB::Green;
-            leds[followPos + 3] = CRGB::Green;
-            leds[followPos + 4] = CRGB::Green;
-            fadeToBlackBy(leds, NUM_LEDS, 30);
-
-            FastLED.show();
-        } else {
+        EVERY_N_MILLISECONDS(50) {
+            client.loop();  // takes 60 micro seconds to complete, fast...
         }
+
+        testStruct.currentPos = stepperX.currentPosition();
+        myTransfer.sendDatum(testStruct);
+
     }
+}
+
+void onConnectionEstablished() {
+    // Subscribe to "mytopic/test" and display received message to Serial
+    client.subscribe("mytopic/test", [](const String& payload) {
+        Serial.print("payload is: ");
+        Serial.println(payload);
+        Serial.print("sub task running on core ");
+        Serial.println(xPortGetCoreID());
+        if (payload == "Rum & Coke") {
+            Serial.println("we have a match");
+            currentDrink = 1;
+            drinkSelected = true;
+        }
+        if (payload == "Jack & Coke") {
+            Serial.println("we have a match");
+            currentDrink = 2;
+            drinkSelected = true;
+        }
+        if(payload.indexOf("brightness") >= 0){
+            testStruct.brightness = payload.substring(11).toInt();;
+        }
+    });
+
+    // Subscribe to "mytopic/wildcardtest/#" and display received message to Serial
+    client.subscribe("mytopic/wildcardtest/#", [](const String& topic, const String& payload) {
+        Serial.println("(From wildcard) topic: " + topic + ", payload: " + payload);
+    });
+
+    // Publish a message to "mytopic/test"
+    client.publish("mytopic/test", "This is a message");  // You can activate the retain flag by setting the third parameter to true
+
+    // Execute delayed instructions
+    client.executeDelayed(5 * 1000, []() {
+        client.publish("mytopic/wildcardtest/test123", "This is a message sent 5 seconds later");
+    });
 }
