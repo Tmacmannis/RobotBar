@@ -1,16 +1,10 @@
-#include <FastLED.h>
 #include <Wire.h>
 #include "AccelStepper.h"
-#include "SerialTransfer.h"
 #include "EspMQTTClient.h"
+#include "SerialTransfer.h"
 
 #define home_switch_x 13  // Pin 9 connected to Home Switch (MicroSwitch)
 #define home_switch_y 12
-#define DATA_PIN 22
-#define LED_TYPE WS2812B
-#define COLOR_ORDER GRB
-#define NUM_LEDS 63
-#define BRIGHTNESS 200
 
 EspMQTTClient client(
     "Bill Wi the Science Fi",
@@ -21,8 +15,6 @@ EspMQTTClient client(
     "vahze5ieGhoh9ieshae3Ingohk7taMoo2zoakohxejoopoZoh1Ahthae5einahK2",  // Client name that uniquely identify your device
     1883                                                                 // The MQTT port, default to 1883. this line can be omitted
 );
-
-CRGB leds[NUM_LEDS];
 
 // AccelStepper Setup
 AccelStepper stepperX(1, 15, 14);  // 1 = Easy Driver interface, 4 = STEP Pin, 5 = DIR Pin
@@ -62,10 +54,7 @@ void setup() {
 
     client.enableDebuggingMessages();                                           // Enable debugging messages sent to serial output
     client.enableHTTPWebUpdater();                                              // Enable the web updater. User and password default to values of MQTTUsername and MQTTPassword. These can be overrited with enableHTTPWebUpdater("user", "password").
-    client.enableLastWillMessage("TestClient/lastwill", "I am going offline");  // You can activate the retain flag by setting the third parameter to true 
-
-    FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
-    FastLED.setBrightness(BRIGHTNESS);
+    client.enableLastWillMessage("TestClient/lastwill", "I am going offline");  // You can activate the retain flag by setting the third parameter to true
 
     stepperX.setEnablePin(5);
     stepperX.setPinsInverted(false, false, true);
@@ -99,7 +88,6 @@ void setup() {
 }
 
 void loop() {
-
     if (drinkSelected) {
         if (currentDrink == 1) {
             Serial.print("main task running on core ");
@@ -117,9 +105,6 @@ void loop() {
 
         drinkSelected = false;
     }
-
-    
-
 
     //Process info coming from bluetooth app
     if (Serial.available()) {
@@ -291,13 +276,10 @@ void Task1code(void* pvParameters) {
     for (;;) {
         delay(28);
 
-        EVERY_N_MILLISECONDS(50) {
-            client.loop();  // takes 60 micro seconds to complete, fast...
-        }
+        client.loop();  // takes 60 micro seconds to complete, fast...
 
         testStruct.currentPos = stepperX.currentPosition();
         myTransfer.sendDatum(testStruct);
-
     }
 }
 
@@ -318,8 +300,9 @@ void onConnectionEstablished() {
             currentDrink = 2;
             drinkSelected = true;
         }
-        if(payload.indexOf("brightness") >= 0){
-            testStruct.brightness = payload.substring(11).toInt();;
+        if (payload.indexOf("brightness") >= 0) {
+            testStruct.brightness = payload.substring(11).toInt();
+            ;
         }
     });
 
