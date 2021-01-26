@@ -6,6 +6,23 @@
 #define home_switch_x 13  // Pin 9 connected to Home Switch (MicroSwitch)
 #define home_switch_y 12
 
+#define IDLE 0
+#define HOMING 1
+#define MOVING_X 2
+#define MOVING_Y 3
+
+//State machine states 
+#define NOT_HOMING 0
+#define X_MOVING_TO_SWITCH 1
+#define X_PRESSING_SWITCH 2
+#define X_MOVING_OFF_SWITCH 3
+#define PAUSE_BEFORE_Y 4
+#define Y_MOVING_TO_X_POSITION 5
+#define Y_MOVING_TO_SWITCH 6
+#define Y_PRESSING_SWITCH 7
+#define Y_MOVING_OFF_SWITCH 8
+
+
 EspMQTTClient client(
     "mySSID",
     "myPASSWORD",
@@ -19,8 +36,6 @@ EspMQTTClient client(
 // AccelStepper Setup
 AccelStepper stepperX(1, 15, 14);  // 1 = Easy Driver interface, 4 = STEP Pin, 5 = DIR Pin
 AccelStepper stepperY(1, 19, 18);
-
-int currentMode;
 
 SerialTransfer myTransfer;
 
@@ -40,11 +55,15 @@ long initial_homing = -1;  // Used to Home Stepper at startup
 
 unsigned long previousMillis = 0;
 unsigned long previousMillis1 = 0;
+unsigned long homingTime = 0;
 
 boolean steppersCalibrated = false;
 char BluetoothData;  // the data received from bluetooth serial link
 boolean drinkSelected = false;
 int currentDrink = 0;
+
+int currentHomingState = NOT_HOMING;
+
 
 void setup() {
     Serial.begin(9600);
@@ -85,37 +104,74 @@ void setup() {
 
     stepperX.disableOutputs();
     stepperY.disableOutputs();
+
+    testStruct.currentMode = IDLE;
 }
 
 void loop() {
-    if (drinkSelected) {
-        if (currentDrink == 1) {
-            Serial.print("main task running on core ");
-            Serial.println(xPortGetCoreID());
-            steppersCalibrated = false;
-            cocktail1();
-        }
 
-        if (currentDrink == 2) {
-            Serial.print("main task running on core ");
-            Serial.println(xPortGetCoreID());
-            steppersCalibrated = false;
-            cocktail2();
-        }
+    stateMachine();
 
-        drinkSelected = false;
-    }
+    // if (drinkSelected) {
+    //     if (currentDrink == 1) {
+    //         Serial.print("main task running on core ");
+    //         Serial.println(xPortGetCoreID());
+    //         steppersCalibrated = false;
+    //         cocktail1();
+    //     }
 
-    //Process info coming from bluetooth app
-    if (Serial.available()) {
-        BluetoothData = Serial.read();  //Get next character from bluetooth
-        Serial.print(BluetoothData);
-        steppersCalibrated = false;
-        if (BluetoothData == 'G') {
-            cocktail1();
-        }
-        if (BluetoothData == 'R') cocktail2();
-        if (BluetoothData == 'V') cocktail3();
+    //     if (currentDrink == 2) {
+    //         Serial.print("main task running on core ");
+    //         Serial.println(xPortGetCoreID());
+    //         steppersCalibrated = false;
+    //         cocktail2();
+    //     }
+
+    //     drinkSelected = false;
+    // }
+
+    // //Process info coming from bluetooth app
+    // if (Serial.available()) {
+    //     BluetoothData = Serial.read();  //Get next character from bluetooth
+    //     Serial.print(BluetoothData);
+    //     steppersCalibrated = false;
+    //     if (BluetoothData == 'G') {
+    //         cocktail1();
+    //     }
+    //     if (BluetoothData == 'R') cocktail2();
+    //     if (BluetoothData == 'V') cocktail3();
+    // }
+}
+
+void stateMachine(){
+    //Serial.print("current mode: ");
+    //Serial.println(testStruct.currentMode);
+    switch(testStruct.currentMode){
+        case IDLE:
+            if (drinkSelected){
+                drinkSelected = false;
+                stepperX.enableOutputs();
+                stepperY.enableOutputs();
+                stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
+                stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
+                testStruct.currentMode = HOMING;
+            }
+            break;
+        case HOMING:
+            if(currentHomingState == NOT_HOMING){
+                currentHomingState = X_MOVING_TO_SWITCH;
+            }
+            if(homeStateMachine()){
+                testStruct.currentMode = IDLE;
+            }
+            break;
+        // case HOMING_Y:
+        //     if(newHomeY()){
+        //         stepperX.disableOutputs();
+        //         stepperY.disableOutputs();
+        //         testStruct.currentMode = IDLE;
+        //     }
+            
     }
 }
 
@@ -290,6 +346,8 @@ void onConnectionEstablished() {
         Serial.println(payload);
         Serial.print("sub task running on core ");
         Serial.println(xPortGetCoreID());
+        Serial.print("current mode is: ");
+        Serial.println(testStruct.currentMode);
         if (payload == "Rum & Coke") {
             Serial.println("we have a match");
             currentDrink = 1;
