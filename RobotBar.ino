@@ -163,6 +163,8 @@ void stateMachine(){
             }
             if(homeStateMachine()){
                 testStruct.currentMode = IDLE;
+                stepperX.disableOutputs();
+                stepperY.disableOutputs();
             }
             break;
         // case HOMING_Y:
@@ -279,7 +281,7 @@ void cocktail1() {
     stepperX.enableOutputs();
     stepperY.enableOutputs();
     Serial.println("Gin & Tonic");
-    homeSteppers();
+    //homeSteppers();
     drink1();
     drink3();
     moveToPosition(0);
@@ -295,7 +297,7 @@ void cocktail2() {
     stepperX.enableOutputs();
     stepperY.enableOutputs();
     Serial.println("Rum & Coke");
-    homeSteppers();
+    //homeSteppers();
     drink2();
     drink4();
     moveToPosition(0);
@@ -309,7 +311,7 @@ void cocktail3() {
     stepperX.enableOutputs();
     stepperY.enableOutputs();
     Serial.println("Vodka Cranberry");
-    homeSteppers();
+    //homeSteppers();
     drink1();
     drink4();
     moveToPosition(0);
