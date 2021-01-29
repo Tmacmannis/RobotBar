@@ -26,7 +26,7 @@
 EspMQTTClient client(
     "Bill Wi the Science Fi",
     "baxtercosmo25",
-    "192.168.0.114",                                                     // MQTT Broker server ip
+    "192.168.0.117",                                                     // MQTT Broker server ip
     "tim",                                                               // Can be omitted if not needed
     "14Q4YsC6YrXl",                                                      // Can be omitted if not needed
     "vahze5ieGhoh9ieshae3Ingohk7taMoo2zoakohxejoopoZoh1Ahthae5einahK2",  // Client name that uniquely identify your device
@@ -163,6 +163,8 @@ void stateMachine(){
             }
             if(homeStateMachine()){
                 testStruct.currentMode = IDLE;
+                stepperX.disableOutputs();
+                stepperY.disableOutputs();
             }
             break;
         // case HOMING_Y:
@@ -279,7 +281,7 @@ void cocktail1() {
     stepperX.enableOutputs();
     stepperY.enableOutputs();
     Serial.println("Gin & Tonic");
-    homeSteppers();
+    //homeSteppers();
     drink1();
     drink3();
     moveToPosition(0);
@@ -295,7 +297,7 @@ void cocktail2() {
     stepperX.enableOutputs();
     stepperY.enableOutputs();
     Serial.println("Rum & Coke");
-    homeSteppers();
+    //homeSteppers();
     drink2();
     drink4();
     moveToPosition(0);
@@ -309,7 +311,7 @@ void cocktail3() {
     stepperX.enableOutputs();
     stepperY.enableOutputs();
     Serial.println("Vodka Cranberry");
-    homeSteppers();
+    //homeSteppers();
     drink1();
     drink4();
     moveToPosition(0);
