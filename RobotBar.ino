@@ -1,10 +1,26 @@
 #include <Wire.h>
+
 #include "AccelStepper.h"
 #include "EspMQTTClient.h"
 #include "SerialTransfer.h"
 
 #define home_switch_x 13  // Pin 9 connected to Home Switch (MicroSwitch)
 #define home_switch_y 12
+
+#define IDLE 0
+#define HOMING 1
+#define MAKE_DRINK 2
+
+//State machine states
+#define NOT_HOMING 0
+#define X_MOVING_TO_SWITCH 1
+#define X_PRESSING_SWITCH 2
+#define X_MOVING_OFF_SWITCH 3
+#define PAUSE_BEFORE_Y 4
+#define Y_MOVING_TO_X_POSITION 5
+#define Y_MOVING_TO_SWITCH 6
+#define Y_PRESSING_SWITCH 7
+#define Y_MOVING_OFF_SWITCH 8
 
 EspMQTTClient client(
     "mySSID",
@@ -20,8 +36,6 @@ EspMQTTClient client(
 AccelStepper stepperX(1, 15, 14);  // 1 = Easy Driver interface, 4 = STEP Pin, 5 = DIR Pin
 AccelStepper stepperY(1, 19, 18);
 
-int currentMode;
-
 SerialTransfer myTransfer;
 
 struct __attribute__((__packed__)) STRUCT {
@@ -29,6 +43,11 @@ struct __attribute__((__packed__)) STRUCT {
     int32_t currentMode;  // 4 bytes
     int32_t currentPos;   // 4 bytes
     int32_t brightness;   // 4 bytess
+    int32_t redValue;
+    int32_t greenValue;
+    int32_t blueValue;
+    int32_t lightState;
+    int32_t animation;
 } testStruct;
 
 TaskHandle_t Task1;
@@ -40,11 +59,30 @@ long initial_homing = -1;  // Used to Home Stepper at startup
 
 unsigned long previousMillis = 0;
 unsigned long previousMillis1 = 0;
+unsigned long homingTime = 0;
 
 boolean steppersCalibrated = false;
 char BluetoothData;  // the data received from bluetooth serial link
 boolean drinkSelected = false;
 int currentDrink = 0;
+boolean movingToPosition = false;
+boolean pour1 = false;
+boolean pour2 = false;
+boolean pour3 = false;
+boolean pour4 = false;
+boolean pour1Move = false;
+boolean pour2Move = false;
+boolean pour3Move = false;
+boolean pour4Move = false;
+
+int sendRGB[3];
+
+//Master switch for pouring shots
+boolean pourShots = false;
+
+int initialXHoming = -1;
+
+int currentHomingState = NOT_HOMING;
 
 void setup() {
     Serial.begin(9600);
@@ -85,41 +123,65 @@ void setup() {
 
     stepperX.disableOutputs();
     stepperY.disableOutputs();
+
+    testStruct.currentMode = IDLE;
 }
 
 void loop() {
-    if (drinkSelected) {
-        if (currentDrink == 1) {
-            Serial.print("main task running on core ");
-            Serial.println(xPortGetCoreID());
-            steppersCalibrated = false;
-            cocktail1();
-        }
+    stateMachine();
+}
 
-        if (currentDrink == 2) {
-            Serial.print("main task running on core ");
-            Serial.println(xPortGetCoreID());
-            steppersCalibrated = false;
-            cocktail2();
-        }
+void stateMachine() {
+    switch (testStruct.currentMode) {
+        case IDLE:
+            if (drinkSelected) {
+                drinkSelected = false;
+                stepperX.enableOutputs();
+                stepperY.enableOutputs();
+                stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
+                stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
+                testStruct.currentMode = HOMING;
+            }
+            break;
+        case HOMING:
+            if (currentHomingState == NOT_HOMING) {
+                currentHomingState = X_MOVING_TO_SWITCH;
+            }
+            if (homeStateMachine()) {
+                testStruct.currentMode = MAKE_DRINK;
+            }
+            break;
+        case MAKE_DRINK:
+            if (makeDrink()) {
+                stepperX.disableOutputs();
+                stepperY.disableOutputs();
+                testStruct.currentMode = IDLE;
+            }
 
-        drinkSelected = false;
-    }
-
-    //Process info coming from bluetooth app
-    if (Serial.available()) {
-        BluetoothData = Serial.read();  //Get next character from bluetooth
-        Serial.print(BluetoothData);
-        steppersCalibrated = false;
-        if (BluetoothData == 'G') {
-            cocktail1();
-        }
-        if (BluetoothData == 'R') cocktail2();
-        if (BluetoothData == 'V') cocktail3();
+            break;
     }
 }
 
-//List of Methods used.. Can be put in separate files
+boolean makeDrink() {
+    switch (currentDrink) {
+        case 0:
+            return true;
+            break;
+        case 1:  //rum and coke
+            if (makeCocktail(17600, 0)) {
+                return true;
+            }
+            break;
+        case 2:  //jack and coke
+            if (makeCocktail(8750, 26600)) {
+                return true;
+            }
+            break;
+    }
+
+    return false;
+}
+
 //*****************************************************************************************************************************************************
 
 void userEnteredPosition() {
@@ -134,25 +196,29 @@ void userEnteredPosition() {
 
 //*****************************************************************************************************************************************************
 
-void moveToPosition(int pos) {
-    move_finished = 0;
-    stepperX.moveTo(pos);
-
-    while (move_finished == 0) {
-        // Check if the Stepper has reached desired position
-        if ((stepperX.distanceToGo() != 0)) {
-            stepperX.run();  // Move Stepper into position
-        }
-        if ((move_finished == 0) && (stepperX.distanceToGo() == 0)) {
-            Serial.println("");
-            move_finished = 1;  // Reset move variable
-        }
+boolean moveToPosition(int pos) {
+    if (!movingToPosition) {
+        movingToPosition = true;
+        stepperX.moveTo(pos);
     }
+
+    stepperX.run();  // Move Stepper into position
+
+    if (stepperX.distanceToGo() == 0) {
+        Serial.println("New Move over");
+        movingToPosition = false;
+        return true;
+    }
+
+    return false;
 }
 
 //*****************************************************************************************************************************************************
 
 void pourOneShot() {
+    if (!pourShots) {
+        return;
+    }
     move_finished = 0;
     stepperY.moveTo(4100);
 
@@ -189,85 +255,43 @@ void pourOneShot() {
 
 //*****************************************************************************************************************************************************
 
-//Move to drink examples
-
-void drink1() {
-    moveToPosition(0);
-    // pourOneShot();
-}
-
-//*****************************************************************************************************************************************************
-
-void drink2() {
-    moveToPosition(8750);
-    // pourOneShot();
-}
-
-//*****************************************************************************************************************************************************
-
-void drink3() {
-    moveToPosition(17600);
-    // pourOneShot();
-}
-
-//*****************************************************************************************************************************************************
-
-void drink4() {
-    moveToPosition(26600);
-    // pourOneShot();
-}
-
-//*****************************************************************************************************************************************************
-
-void cocktail1() {
-    stepperX.enableOutputs();
-    stepperY.enableOutputs();
-    Serial.println("Gin & Tonic");
-    homeSteppers();
-    drink1();
-    drink3();
-    moveToPosition(0);
-    Serial.print("Done!");
-    serialFlush();
-    stepperX.disableOutputs();
-    stepperY.disableOutputs();
-}
-
-//*****************************************************************************************************************************************************
-
-void cocktail2() {
-    stepperX.enableOutputs();
-    stepperY.enableOutputs();
-    Serial.println("Rum & Coke");
-    homeSteppers();
-    drink2();
-    drink4();
-    moveToPosition(0);
-    Serial.print("Done!");
-    serialFlush();
-    stepperX.disableOutputs();
-    stepperY.disableOutputs();
-}
-
-void cocktail3() {
-    stepperX.enableOutputs();
-    stepperY.enableOutputs();
-    Serial.println("Vodka Cranberry");
-    homeSteppers();
-    drink1();
-    drink4();
-    moveToPosition(0);
-    Serial.print("Done!");
-    serialFlush();
-    stepperX.disableOutputs();
-    stepperY.disableOutputs();
-}
-
-void serialFlush() {
-    while (Serial1.available() > 0) {
-        char t = Serial1.read();
+boolean makeCocktail(int pos1, int pos2) {
+    if (!pour1Move) {
+        if (moveToPosition(pos1)) {
+            Serial.println("Made it into position 1");
+            pour1Move = true;
+        }
     }
+
+    if (!pour1 && pour1Move) {
+        pour1 = true;
+        pourOneShot();
+    }
+
+    if (!pour3Move && pour1 && pour1Move) {
+        if (moveToPosition(pos2)) {
+            Serial.println("Made it into position 3");
+            pour3Move = true;
+        }
+    }
+
+    if (!pour3 && pour3Move) {
+        pour3 = true;
+        pourOneShot();
+    }
+
+    if (pour1Move && pour3Move && moveToPosition(0)) {
+        pour1 = false;
+        pour3 = false;
+        pour1Move = false;
+        pour3Move = false;
+        return true;
+    }
+
+    return false;
 }
+
+//*****************************************************************************************************************************************************
 
 void Task1code(void* pvParameters) {
     Serial.print("Task1 running on core ");
@@ -290,6 +314,8 @@ void onConnectionEstablished() {
         Serial.println(payload);
         Serial.print("sub task running on core ");
         Serial.println(xPortGetCoreID());
+        Serial.print("current mode is: ");
+        Serial.println(testStruct.currentMode);
         if (payload == "Rum & Coke") {
             Serial.println("we have a match");
             currentDrink = 1;
@@ -300,10 +326,72 @@ void onConnectionEstablished() {
             currentDrink = 2;
             drinkSelected = true;
         }
-        if (payload.indexOf("brightness") >= 0) {
-            testStruct.brightness = payload.substring(11).toInt();
-            ;
+        // if (payload.indexOf("brightness") >= 0) {
+        //     testStruct.brightness = payload.substring(11).toInt();
+        // }
+
+        if (payload == "Stop!") {
+            testStruct.currentMode = IDLE;
+            currentHomingState = NOT_HOMING;
+            pour1 = false;
+            pour2 = false;
+            pour3 = false;
+            pour4 = false;
+            pour1Move = false;
+            pour2Move = false;
+            pour3Move = false;
+            pour4Move = false;
+            initialXHoming = -1;
+            movingToPosition = false;
         }
+    });
+
+    client.subscribe("barbot/color", [](const String& payload) {
+        Serial.print("Color payload is: ");
+        Serial.println(payload);
+
+        String rval = getValue(payload, ',', 0);
+        String gval = getValue(payload, ',', 1);
+        String bval = getValue(payload, ',', 2);
+
+        int testRed = rval.toInt();
+        int testGreen = gval.toInt();
+        int testBlue = bval.toInt();
+        Serial.print("testing red: ");
+        Serial.println(testRed);
+        Serial.print("testing green: ");
+        Serial.println(testGreen);
+        Serial.print("testing blue: ");
+        Serial.println(testBlue);
+
+        testStruct.redValue = testRed;
+        testStruct.greenValue = testGreen;
+        testStruct.blueValue = testBlue;
+    });
+
+    client.subscribe("barbot/brightness", [](const String& payload) {
+        Serial.print("brightness payload is: ");
+        Serial.println(payload);
+        testStruct.brightness = payload.toInt();
+    });
+
+    client.subscribe("barbot/lightsOnOFF", [](const String& payload) {
+        Serial.print("lightsOnOFF payload is: ");
+        Serial.println(payload);
+        if (payload == "ON") {
+            testStruct.lightState = 1;
+            Serial.println("Lights set to ON");
+        } else if (payload == "OFF") {
+            testStruct.lightState = 0;
+            Serial.println("Lights set to OFF");
+        } else {
+        }
+    });
+
+    client.subscribe("barbot/effects", [](const String& payload) {
+        Serial.print("effects payload is: ");
+        Serial.println(payload);
+        setAnimation(payload);
     });
 
     // Subscribe to "mytopic/wildcardtest/#" and display received message to Serial
@@ -313,9 +401,40 @@ void onConnectionEstablished() {
 
     // Publish a message to "mytopic/test"
     client.publish("mytopic/test", "This is a message");  // You can activate the retain flag by setting the third parameter to true
+}
 
-    // Execute delayed instructions
-    client.executeDelayed(5 * 1000, []() {
-        client.publish("mytopic/wildcardtest/test123", "This is a message sent 5 seconds later");
-    });
+String getValue(String data, char separator, int index) {
+    int found = 0;
+    int strIndex[] = {0, -1};
+    int maxIndex = data.length() - 1;
+
+    for (int i = 0; i <= maxIndex && found <= index; i++) {
+        if (data.charAt(i) == separator || i == maxIndex) {
+            found++;
+            strIndex[0] = strIndex[1] + 1;
+            strIndex[1] = (i == maxIndex) ? i + 1 : i;
+        }
+    }
+    return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
+}
+
+void setAnimation(String payload) {
+    if (payload == "Solid Color") {
+        testStruct.animation = 0;
+    }
+    if (payload == "Demo Reel") {
+        testStruct.animation = 1;
+    }
+    if (payload == "Breathing Single Color") {
+        testStruct.animation = 2;
+    }
+    if (payload == "Breathing Multi Color") {
+        testStruct.animation = 3;
+    }
+    if (payload == "Scanner") {
+        testStruct.animation = 4;
+    }
+    if (payload == "Rainbow") {
+        testStruct.animation = 5;
+    }
 }
