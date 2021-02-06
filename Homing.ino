@@ -1,7 +1,7 @@
 boolean xSwitchActivated = false;
 boolean xHomingComplete = false;
 boolean yHomingFailure = false;
-int initialXHoming = -1;
+
 int xHomeCount = 0;
 
 boolean homeStateMachine() {
@@ -71,9 +71,12 @@ boolean homeStateMachine() {
         }
 
         case Y_MOVING_TO_X_POSITION: {
-            moveToPosition(4000);
-            currentHomingState = Y_MOVING_TO_SWITCH;
-            initialXHoming = -1;
+            // moveToPosition(4000);
+            if (moveToPosition(4000)) {
+                currentHomingState = Y_MOVING_TO_SWITCH;
+                initialXHoming = -1;
+            }
+
             break;
         }
 
