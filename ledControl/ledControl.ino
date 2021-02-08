@@ -3,6 +3,7 @@
 #include "SerialTransfer.h"
 
 #define DATA_PIN 13
+#define BOTTLE_DATA_PIN 15
 #define LED_TYPE WS2812B
 #define COLOR_ORDER GRB
 #define NUM_LEDS 63
@@ -14,6 +15,7 @@
 #define MAKE_DRINK 2
 
 CRGB leds[NUM_LEDS];
+CRGB bottleLeds[12];
 
 int prevBrightness = 0;
 int currentSwitchState = 0;
@@ -39,6 +41,13 @@ boolean becameIdle;
 boolean becameHoming;
 boolean animationChanged = false;
 boolean brightnessIncreasing = false;
+boolean randomDrinkColors = false;
+boolean bottlesInSync = true;
+
+uint8_t tempColor1;
+uint8_t tempColor2;
+uint8_t tempColor3;
+uint8_t tempColor4;
 
 /////////////////////////////////////////////////////////////////// Callbacks
 void hi() {
@@ -64,6 +73,7 @@ void setup() {
     pinMode(13, OUTPUT);
 
     FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+    FastLED.addLeds<LED_TYPE, BOTTLE_DATA_PIN, COLOR_ORDER>(bottleLeds, 12).setCorrection(TypicalLEDStrip);
     FastLED.setBrightness(BRIGHTNESS);
 }
 
@@ -118,11 +128,14 @@ void lightStateMachine() {
     switch (testStruct.currentMode) {
         case IDLE: {
             selectAnimation();
+            bottlesInSync = true;
+            randomDrinkColors = false;
 
             break;
         }
         case HOMING: {
             selectAnimation();
+            bottlesInSync = true;
             // if (!becameHoming) {
             //     for (int i = 0; i < NUM_LEDS; i++) {
             //         leds[i] = CRGB::Red;
@@ -134,13 +147,51 @@ void lightStateMachine() {
             break;
         }
         case MAKE_DRINK: {
-            int followPos = map(testStruct.currentPos, 0, 26600, 4, 45);
-            leds[followPos] = CRGB::Green;
-            leds[followPos + 1] = CRGB::Green;
-            leds[followPos + 2] = CRGB::Green;
-            leds[followPos + 3] = CRGB::Green;
-            leds[followPos + 4] = CRGB::Green;
-            fadeToBlackBy(leds, NUM_LEDS, 30);
+            // int followPos = map(testStruct.currentPos, 0, 26600, 4, 45);
+            // leds[followPos] = CRGB::Green;
+            // leds[followPos + 1] = CRGB::Green;
+            // leds[followPos + 2] = CRGB::Green;
+            // leds[followPos + 3] = CRGB::Green;
+            // leds[followPos + 4] = CRGB::Green;
+            // fadeToBlackBy(leds, NUM_LEDS, 30);
+            bottlesInSync = false;
+            selectAnimation();
+
+            if (!randomDrinkColors) {
+                tempColor1 = random8();
+                tempColor2 = random8();
+                tempColor3 = random8();
+                tempColor4 = random8();
+                randomDrinkColors = true;
+            }
+
+            int tempPos = testStruct.currentPos;
+
+            if (testStruct.currentPos == 0) {
+                bottleLeds[0] = CHSV(tempColor1, 255, 255);
+                bottleLeds[1] = CHSV(tempColor1, 255, 255);
+                bottleLeds[2] = CHSV(tempColor1, 255, 255);
+            }
+
+            if (testStruct.currentPos == 8750) {
+                bottleLeds[3] = CHSV(tempColor2, 255, 255);
+                bottleLeds[4] = CHSV(tempColor2, 255, 255);
+                bottleLeds[5] = CHSV(tempColor2, 255, 255);
+            }
+
+            if (testStruct.currentPos == 17600) {
+                bottleLeds[6] = CHSV(tempColor3, 255, 255);
+                bottleLeds[7] = CHSV(tempColor3, 255, 255);
+                bottleLeds[8] = CHSV(tempColor3, 255, 255);
+            }
+
+            if (testStruct.currentPos == 26600) {
+                bottleLeds[9] = CHSV(tempColor4, 255, 255);
+                bottleLeds[10] = CHSV(tempColor4, 255, 255);
+                bottleLeds[11] = CHSV(tempColor4, 255, 255);
+            }
+
+            fadeToBlackBy(bottleLeds, 12, 5);
 
             FastLED.show();
             break;
@@ -159,6 +210,12 @@ void selectAnimation() {
             for (int i = 0; i < NUM_LEDS; i++) {
                 leds[i].setRGB(testStruct.redValue, testStruct.greenValue, testStruct.blueValue);
             }
+            if (bottlesInSync) {
+                for (int i = 0; i < 12; i++) {
+                    bottleLeds[i].setRGB(testStruct.redValue, testStruct.greenValue, testStruct.blueValue);
+                }
+            }
+
             FastLED.show();
             // }
             break;
@@ -183,6 +240,11 @@ void selectAnimation() {
 
             for (int i = 0; i < NUM_LEDS; i++) {
                 leds[i] = temp1;
+            }
+            if (bottlesInSync) {
+                for (int i = 0; i < 12; i++) {
+                    bottleLeds[i] = temp1;
+                }
             }
 
             FastLED.show();
@@ -210,7 +272,11 @@ void selectAnimation() {
         case 3: {  //breathing multi
             for (int i = 0; i < NUM_LEDS; i++) {
                 leds[i] = CHSV(breathingHue, 255, breathingBrightness);
-                ;
+            }
+            if (bottlesInSync) {
+                for (int i = 0; i < 12; i++) {
+                    bottleLeds[i] = CHSV(breathingHue, 255, breathingBrightness);
+                }
             }
 
             FastLED.show();
@@ -238,14 +304,26 @@ void selectAnimation() {
         case 4: {  //scanner
             CHSV temp1 = hsv2rgb();
             fadeToBlackBy(leds, NUM_LEDS, 20);
+            fadeToBlackBy(bottleLeds, 12, 20);
             int pos = beatsin16(13, 0, NUM_LEDS - 1);
+            int pos2 = (beatsin16(13, 0, 4 - 1) * 3);
             leds[pos] += temp1;
+            if (bottlesInSync) {
+                bottleLeds[pos2] += temp1;
+                bottleLeds[pos2 + 1] += temp1;
+                bottleLeds[pos2 + 2] += temp1;
+            }
+
             FastLED.show();
             FastLED.delay(1000 / FRAMES_PER_SECOND);
             break;
         }
         case 5: {  //rainbow
             fill_rainbow(leds, NUM_LEDS, gHue, 7);
+            if (bottlesInSync) {
+                fill_rainbow(bottleLeds, 12, gHue, 7);
+            }
+
             EVERY_N_MILLISECONDS(20) { gHue++; }
             FastLED.show();
             break;
@@ -276,6 +354,9 @@ void nextPattern() {
 void rainbow() {
     // FastLED's built-in rainbow generator
     fill_rainbow(leds, NUM_LEDS, gHue, 7);
+    if (bottlesInSync) {
+        fill_rainbow(bottleLeds, 12, gHue, 7);
+    }
 }
 
 void rainbowWithGlitter() {
@@ -287,21 +368,36 @@ void rainbowWithGlitter() {
 void addGlitter(fract8 chanceOfGlitter) {
     if (random8() < chanceOfGlitter) {
         leds[random16(NUM_LEDS)] += CRGB::White;
+        if (bottlesInSync) {
+            bottleLeds[random16(12)] += CRGB::White;
+        }
     }
 }
 
 void confetti() {
     // random colored speckles that blink in and fade smoothly
     fadeToBlackBy(leds, NUM_LEDS, 10);
+    fadeToBlackBy(bottleLeds, 12, 10);
     int pos = random16(NUM_LEDS);
+    int pos2 = random16(12);
     leds[pos] += CHSV(gHue + random8(64), 200, 255);
+    if (bottlesInSync) {
+        bottleLeds[pos2] += CHSV(gHue + random8(64), 200, 255);
+    }
 }
 
 void sinelon() {
     // a colored dot sweeping back and forth, with fading trails
     fadeToBlackBy(leds, NUM_LEDS, 20);
+    fadeToBlackBy(bottleLeds, 12, 20);
     int pos = beatsin16(13, 0, NUM_LEDS - 1);
+    int pos2 = (beatsin16(13, 0, 4 - 1) * 3);
     leds[pos] += CHSV(gHue, 255, 192);
+    if (bottlesInSync) {
+        bottleLeds[pos2] += CHSV(gHue, 255, 192);
+        bottleLeds[pos2 + 1] += CHSV(gHue, 255, 192);
+        bottleLeds[pos2 + 2] += CHSV(gHue, 255, 192);
+    }
 }
 
 void bpm() {
@@ -312,14 +408,23 @@ void bpm() {
     for (int i = 0; i < NUM_LEDS; i++) {  //9948
         leds[i] = ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i * 10));
     }
+    if (bottlesInSync) {
+        for (int i = 0; i < 12; i++) {  //9948
+            bottleLeds[i] = ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i * 10));
+        }
+    }
 }
 
 void juggle() {
     // eight colored dots, weaving in and out of sync with each other
     fadeToBlackBy(leds, NUM_LEDS, 20);
+    fadeToBlackBy(bottleLeds, 12, 20);
     byte dothue = 0;
     for (int i = 0; i < 8; i++) {
         leds[beatsin16(i + 7, 0, NUM_LEDS - 1)] |= CHSV(dothue, 200, 255);
+        if (bottlesInSync) {
+            bottleLeds[beatsin16(i + 7, 0, 12 - 1)] |= CHSV(dothue, 200, 255);
+        }
         dothue += 32;
     }
 }

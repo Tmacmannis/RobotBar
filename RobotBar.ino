@@ -78,7 +78,7 @@ boolean pour4Move = false;
 int sendRGB[3];
 
 //Master switch for pouring shots
-boolean pourShots = false;
+boolean pourShots = true;
 
 int initialXHoming = -1;
 
