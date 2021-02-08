@@ -3,6 +3,7 @@
 #include "AccelStepper.h"
 #include "EspMQTTClient.h"
 #include "SerialTransfer.h"
+#include <credentials.h>
 
 #define home_switch_x 13  // Pin 9 connected to Home Switch (MicroSwitch)
 #define home_switch_y 12
@@ -23,8 +24,8 @@
 #define Y_MOVING_OFF_SWITCH 8
 
 EspMQTTClient client(
-    "mySSID",
-    "myPASSWORD",
+    mySSID,
+    myPASSWORD,
     "mqttIP",                                                     // MQTT Broker server ip
     "tim",                                                               // Can be omitted if not needed
     "14Q4YsC6YrXl",                                                      // Can be omitted if not needed
