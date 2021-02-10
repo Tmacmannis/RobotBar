@@ -1,9 +1,9 @@
 #include <Wire.h>
+#include <credentials.h>
 
 #include "AccelStepper.h"
 #include "EspMQTTClient.h"
 #include "SerialTransfer.h"
-#include <credentials.h>
 
 #define home_switch_x 13  // Pin 9 connected to Home Switch (MicroSwitch)
 #define home_switch_y 12
@@ -26,11 +26,11 @@
 EspMQTTClient client(
     mySSID,
     myPASSWORD,
-    mqttIP,                                                     // MQTT Broker server ip
-    "tim",                                                               // Can be omitted if not needed
-    "14Q4YsC6YrXl",                                                      // Can be omitted if not needed
-    haPASSWORD,  // Client name that uniquely identify your device
-    haPORT                                                                 // The MQTT port, default to 1883. this line can be omitted
+    mqttIP,          // MQTT Broker server ip
+    "tim",           // Can be omitted if not needed
+    "14Q4YsC6YrXl",  // Can be omitted if not needed
+    haPASSWORD,      // Client name that uniquely identify your device
+    haPORT           // The MQTT port, default to 1883. this line can be omitted
 );
 
 // AccelStepper Setup
@@ -61,6 +61,7 @@ long initial_homing = -1;  // Used to Home Stepper at startup
 unsigned long previousMillis = 0;
 unsigned long previousMillis1 = 0;
 unsigned long homingTime = 0;
+unsigned long armedUpdateTime = 0;
 
 boolean steppersCalibrated = false;
 char BluetoothData;  // the data received from bluetooth serial link
@@ -94,6 +95,7 @@ void setup() {
     client.enableDebuggingMessages();                                           // Enable debugging messages sent to serial output
     client.enableHTTPWebUpdater();                                              // Enable the web updater. User and password default to values of MQTTUsername and MQTTPassword. These can be overrited with enableHTTPWebUpdater("user", "password").
     client.enableLastWillMessage("TestClient/lastwill", "I am going offline");  // You can activate the retain flag by setting the third parameter to true
+    client.enableDebuggingMessages(false);
 
     stepperX.setEnablePin(5);
     stepperX.setPinsInverted(false, false, true);
@@ -170,11 +172,13 @@ boolean makeDrink() {
             break;
         case 1:  //rum and coke
             if (makeCocktail(17600, 0)) {
+                pourShots = false;
                 return true;
             }
             break;
         case 2:  //jack and coke
             if (makeCocktail(8750, 26600)) {
+                pourShots = false;
                 return true;
             }
             break;
@@ -305,6 +309,17 @@ void Task1code(void* pvParameters) {
 
         testStruct.currentPos = stepperX.currentPosition();
         myTransfer.sendDatum(testStruct);
+
+
+        unsigned long currentMillis = millis();
+        if (currentMillis - armedUpdateTime >= 1000) {
+            armedUpdateTime = currentMillis;
+            if (pourShots) {
+                client.publish("barbot/armedState", "ON");
+            } else {
+                client.publish("barbot/armedState", "OFF");
+            }
+        }
     }
 }
 
@@ -358,12 +373,6 @@ void onConnectionEstablished() {
         int testRed = rval.toInt();
         int testGreen = gval.toInt();
         int testBlue = bval.toInt();
-        Serial.print("testing red: ");
-        Serial.println(testRed);
-        Serial.print("testing green: ");
-        Serial.println(testGreen);
-        Serial.print("testing blue: ");
-        Serial.println(testBlue);
 
         testStruct.redValue = testRed;
         testStruct.greenValue = testGreen;
@@ -395,14 +404,21 @@ void onConnectionEstablished() {
         setAnimation(payload);
     });
 
+    client.subscribe("barbot/armedCommand", [](const String& payload) {
+        Serial.print("armed payload is: ");
+        Serial.println(payload);
+        if(payload == "ON"){
+            pourShots = true;
+        } else {
+            pourShots = false;
+        }
+    });
+
     // Subscribe to "mytopic/wildcardtest/#" and display received message to Serial
     client.subscribe("mytopic/wildcardtest/#", [](const String& topic, const String& payload) {
         Serial.println("(From wildcard) topic: " + topic + ", payload: " + payload);
     });
-
-    // Publish a message to "mytopic/test"
-    client.publish("mytopic/test", "This is a message");  // You can activate the retain flag by setting the third parameter to true
-}
+ }
 
 String getValue(String data, char separator, int index) {
     int found = 0;
