@@ -86,6 +86,8 @@ int initialXHoming = -1;
 
 int currentHomingState = NOT_HOMING;
 
+int armCount = 0;
+
 void setup() {
     Serial.begin(9600);
     Serial2.begin(115200);
@@ -314,6 +316,19 @@ void Task1code(void* pvParameters) {
         unsigned long currentMillis = millis();
         if (currentMillis - armedUpdateTime >= 1000) {
             armedUpdateTime = currentMillis;
+
+            if(pourShots && testStruct.currentMode == IDLE){
+                armCount++;
+            } else{
+                armCount = 0;
+            }
+
+            Serial.println(armCount);
+
+            if(armCount > 5){
+                pourShots = false;
+            }
+
             if (pourShots) {
                 client.publish("barbot/armedState", "ON");
             } else {
