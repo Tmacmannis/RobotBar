@@ -28,7 +28,7 @@ boolean homeStateMachine() {
         case X_PRESSING_SWITCH: {
             unsigned long currentMillis = micros();
             if (currentMillis - previousMillis1 >= 250000) {
-                Serial.println("waited the correct ammount of time");
+                TelnetStream.println("waited the correct ammount of time");
                 previousMillis1 = currentMillis;
                 currentHomingState = X_MOVING_OFF_SWITCH;
                 stepperX.setCurrentPosition(0);
@@ -63,7 +63,7 @@ boolean homeStateMachine() {
             unsigned long currentMillis = micros();
             if (currentMillis - previousMillis1 >= 100000) {
                 previousMillis1 = currentMillis;
-                Serial.println("chillen after x done homing");
+                TelnetStream.println("chillen after x done homing");
                 currentHomingState = Y_MOVING_TO_X_POSITION;
             }
 
@@ -91,7 +91,7 @@ boolean homeStateMachine() {
 
                 if (initialXHoming < -1800) {
                     if (!yHomingFailure) {
-                        Serial.println("Y Stepper Homing Failed!!!");
+                        TelnetStream.println("Y Stepper Homing Failed!!!");
                     }
                     yHomingFailure = true;
                     stepperY.moveTo(0);
@@ -109,8 +109,8 @@ boolean homeStateMachine() {
                     previousMillis1 = currentMillis;
                     stepperY.moveTo(initialXHoming);  // Set the position to move to
                     initialXHoming--;                 // Decrease by 1 for next move if needed
-                    // Serial.print("initialXHoming: ");
-                    // Serial.println(initialXHoming);
+                    // TelnetStream.print("initialXHoming: ");
+                    // TelnetStream.println(initialXHoming);
                     stepperY.run();
                 }
             }
@@ -120,7 +120,7 @@ boolean homeStateMachine() {
         case Y_PRESSING_SWITCH: {
             unsigned long currentMillis = micros();
             if (currentMillis - previousMillis1 >= 100000) {
-                Serial.println("waited the correct ammount of time");
+                TelnetStream.println("waited the correct ammount of time");
                 previousMillis1 = currentMillis;
                 currentHomingState = Y_MOVING_OFF_SWITCH;
                 stepperY.setCurrentPosition(0);

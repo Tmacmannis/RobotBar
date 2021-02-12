@@ -4,6 +4,7 @@
 #include "AccelStepper.h"
 #include "EspMQTTClient.h"
 #include "SerialTransfer.h"
+#include "OTA.h"
 
 #define home_switch_x 13  // Pin 9 connected to Home Switch (MicroSwitch)
 #define home_switch_y 12
@@ -94,6 +95,8 @@ void setup() {
     pinMode(home_switch_x, INPUT_PULLUP);
     pinMode(home_switch_y, INPUT_PULLUP);
 
+    setupOTA("BarBot", mySSID, myPASSWORD);
+
     client.enableDebuggingMessages();                                           // Enable debugging messages sent to serial output
     client.enableHTTPWebUpdater();                                              // Enable the web updater. User and password default to values of MQTTUsername and MQTTPassword. These can be overrited with enableHTTPWebUpdater("user", "password").
     client.enableLastWillMessage("TestClient/lastwill", "I am going offline");  // You can activate the retain flag by setting the third parameter to true
@@ -133,6 +136,7 @@ void setup() {
 }
 
 void loop() {
+    
     stateMachine();
 }
 
@@ -194,8 +198,8 @@ boolean makeDrink() {
 void userEnteredPosition() {
     while (Serial.available() > 0) {  // Check if values are available in the Serial Buffer
         TravelX = Serial.parseInt();
-        Serial.print("Moving stepper into position: ");
-        Serial.println(TravelX);
+        TelnetStream.print("Moving stepper into position: ");
+        TelnetStream.println(TravelX);
         delay(1000);
         moveToPosition(0 - TravelX);
     }
@@ -212,7 +216,7 @@ boolean moveToPosition(int pos) {
     stepperX.run();  // Move Stepper into position
 
     if (stepperX.distanceToGo() == 0) {
-        Serial.println("New Move over");
+        TelnetStream.println("New Move over");
         movingToPosition = false;
         return true;
     }
@@ -254,7 +258,7 @@ void pourOneShot() {
 
         // If move is completed display message on Serial Monitor
         if ((move_finished == 0) && (stepperY.distanceToGo() == 0)) {
-            Serial.println("Shot Poured");
+            TelnetStream.println("Shot Poured");
             move_finished = 1;  // Reset move variable
         }
     }
@@ -265,7 +269,7 @@ void pourOneShot() {
 boolean makeCocktail(int pos1, int pos2) {
     if (!pour1Move) {
         if (moveToPosition(pos1)) {
-            Serial.println("Made it into position 1");
+            TelnetStream.println("Made it into position 1");
             pour1Move = true;
         }
     }
@@ -277,7 +281,7 @@ boolean makeCocktail(int pos1, int pos2) {
 
     if (!pour3Move && pour1 && pour1Move) {
         if (moveToPosition(pos2)) {
-            Serial.println("Made it into position 3");
+            TelnetStream.println("Made it into position 3");
             pour3Move = true;
         }
     }
@@ -301,31 +305,28 @@ boolean makeCocktail(int pos1, int pos2) {
 //*****************************************************************************************************************************************************
 
 void Task1code(void* pvParameters) {
-    Serial.print("Task1 running on core ");
-    Serial.println(xPortGetCoreID());
+    TelnetStream.print("Task1 running on core ");
+    TelnetStream.println(xPortGetCoreID());
 
     for (;;) {
         delay(28);
-
+        ArduinoOTA.handle();
         client.loop();  // takes 60 micro seconds to complete, fast...
 
         testStruct.currentPos = stepperX.currentPosition();
         myTransfer.sendDatum(testStruct);
 
-
         unsigned long currentMillis = millis();
         if (currentMillis - armedUpdateTime >= 1000) {
             armedUpdateTime = currentMillis;
 
-            if(pourShots && testStruct.currentMode == IDLE){
+            if (pourShots && testStruct.currentMode == IDLE) {
                 armCount++;
-            } else{
+            } else {
                 armCount = 0;
             }
 
-            Serial.println(armCount);
-
-            if(armCount > 5){
+            if (armCount > 3) {
                 pourShots = false;
             }
 
@@ -341,19 +342,19 @@ void Task1code(void* pvParameters) {
 void onConnectionEstablished() {
     // Subscribe to "mytopic/test" and display received message to Serial
     client.subscribe("mytopic/test", [](const String& payload) {
-        Serial.print("payload is: ");
-        Serial.println(payload);
-        Serial.print("sub task running on core ");
-        Serial.println(xPortGetCoreID());
-        Serial.print("current mode is: ");
-        Serial.println(testStruct.currentMode);
+        TelnetStream.print("payload is: ");
+        TelnetStream.println(payload);
+        TelnetStream.print("sub task running on core ");
+        TelnetStream.println(xPortGetCoreID());
+        TelnetStream.print("current mode is: ");
+        TelnetStream.println(testStruct.currentMode);
         if (payload == "Rum & Coke") {
-            Serial.println("we have a match");
+            TelnetStream.println("we have a match");
             currentDrink = 1;
             drinkSelected = true;
         }
         if (payload == "Jack & Coke") {
-            Serial.println("we have a match");
+            TelnetStream.println("we have a match");
             currentDrink = 2;
             drinkSelected = true;
         }
@@ -378,8 +379,8 @@ void onConnectionEstablished() {
     });
 
     client.subscribe("barbot/color", [](const String& payload) {
-        Serial.print("Color payload is: ");
-        Serial.println(payload);
+        TelnetStream.print("Color payload is: ");
+        TelnetStream.println(payload);
 
         String rval = getValue(payload, ',', 0);
         String gval = getValue(payload, ',', 1);
@@ -395,34 +396,34 @@ void onConnectionEstablished() {
     });
 
     client.subscribe("barbot/brightness", [](const String& payload) {
-        Serial.print("brightness payload is: ");
-        Serial.println(payload);
+        TelnetStream.print("brightness payload is: ");
+        TelnetStream.println(payload);
         testStruct.brightness = payload.toInt();
     });
 
     client.subscribe("barbot/lightsOnOFF", [](const String& payload) {
-        Serial.print("lightsOnOFF payload is: ");
-        Serial.println(payload);
+        TelnetStream.print("lightsOnOFF payload is: ");
+        TelnetStream.println(payload);
         if (payload == "ON") {
             testStruct.lightState = 1;
-            Serial.println("Lights set to ON");
+            TelnetStream.println("Lights set to ON");
         } else if (payload == "OFF") {
             testStruct.lightState = 0;
-            Serial.println("Lights set to OFF");
+            TelnetStream.println("Lights set to OFF");
         } else {
         }
     });
 
     client.subscribe("barbot/effects", [](const String& payload) {
-        Serial.print("effects payload is: ");
-        Serial.println(payload);
+        TelnetStream.print("effects payload is: ");
+        TelnetStream.println(payload);
         setAnimation(payload);
     });
 
     client.subscribe("barbot/armedCommand", [](const String& payload) {
-        Serial.print("armed payload is: ");
-        Serial.println(payload);
-        if(payload == "ON"){
+        TelnetStream.print("armed payload is: ");
+        TelnetStream.println(payload);
+        if (payload == "ON") {
             pourShots = true;
         } else {
             pourShots = false;
@@ -431,9 +432,9 @@ void onConnectionEstablished() {
 
     // Subscribe to "mytopic/wildcardtest/#" and display received message to Serial
     client.subscribe("mytopic/wildcardtest/#", [](const String& topic, const String& payload) {
-        Serial.println("(From wildcard) topic: " + topic + ", payload: " + payload);
+        TelnetStream.println("(From wildcard) topic: " + topic + ", payload: " + payload);
     });
- }
+}
 
 String getValue(String data, char separator, int index) {
     int found = 0;
