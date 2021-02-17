@@ -82,26 +82,26 @@ void loop() {
     if (myTransfer.available()) {
         myTransfer.rxObj(testStruct);
 
-        // EVERY_N_MILLISECONDS(100) {
-        //     Serial.print(" current position: ");
-        //     Serial.println(testStruct.currentPos);
-        //     Serial.print(" current brightness: ");
-        //     Serial.println(testStruct.brightness);
-        //     Serial.print(" current mode: ");
-        //     Serial.println(testStruct.currentMode);
-        //     Serial.print(" red value: ");
-        //     Serial.println(testStruct.redValue);
-        //     Serial.print(" green value: ");
-        //     Serial.println(testStruct.greenValue);
-        //     Serial.print(" blue blue: ");
-        //     Serial.println(testStruct.blueValue);
-        //     Serial.print(" lightState: ");
-        //     Serial.println(testStruct.lightState);
-        //     Serial.print(" animation: ");
-        //     Serial.println(testStruct.animation);
-        //     Serial.println();
-        //     Serial.println();
-        // }
+        EVERY_N_MILLISECONDS(100) {
+            Serial.print(" current position: ");
+            Serial.println(testStruct.currentPos);
+            Serial.print(" current brightness: ");
+            Serial.println(testStruct.brightness);
+            Serial.print(" current mode: ");
+            Serial.println(testStruct.currentMode);
+            Serial.print(" red value: ");
+            Serial.println(testStruct.redValue);
+            Serial.print(" green value: ");
+            Serial.println(testStruct.greenValue);
+            Serial.print(" blue blue: ");
+            Serial.println(testStruct.blueValue);
+            Serial.print(" lightState: ");
+            Serial.println(testStruct.lightState);
+            Serial.print(" animation: ");
+            Serial.println(testStruct.animation);
+            Serial.println();
+            Serial.println();
+        }
 
         //check brightness
         if (testStruct.brightness != prevBrightness && currentSwitchState == 1) {
@@ -119,6 +119,10 @@ void loop() {
                 FastLED.setBrightness(prevBrightness);
                 currentSwitchState = 1;
             }
+        }
+    } else{
+        EVERY_N_MILLISECONDS(100) {
+            Serial.println("Serial Connection down");
         }
     }
     lightStateMachine();
