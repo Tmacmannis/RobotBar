@@ -231,7 +231,7 @@ void pourOneShot() {
         return;
     }
     move_finished = 0;
-    stepperY.moveTo(4100);
+    stepperY.moveTo(4500);
 
     while (move_finished == 0) {
         // Check if the Stepper has reached desired position
@@ -245,7 +245,7 @@ void pourOneShot() {
         }
     }
 
-    delay(1000);
+    delay(1400);
 
     move_finished = 0;
     stepperY.moveTo(0);
