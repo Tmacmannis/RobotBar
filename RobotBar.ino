@@ -78,6 +78,8 @@ boolean pour2Move = false;
 boolean pour3Move = false;
 boolean pour4Move = false;
 
+boolean doubleShot = false;
+
 int sendRGB[3];
 
 //Master switch for pouring shots
@@ -177,7 +179,7 @@ boolean makeDrink() {
             return true;
             break;
         case 1:  //rum and coke
-            if (makeCocktail(17600, 0)) {
+            if (makeCocktail(0,17600)) {
                 pourShots = false;
                 return true;
             }
@@ -226,7 +228,7 @@ boolean moveToPosition(int pos) {
 
 //*****************************************************************************************************************************************************
 
-void pourOneShot() {
+void pourOneShot(int shotTime) {
     if (!pourShots) {
         return;
     }
@@ -245,7 +247,7 @@ void pourOneShot() {
         }
     }
 
-    delay(1400);
+    delay(shotTime);
 
     move_finished = 0;
     stepperY.moveTo(0);
@@ -276,7 +278,11 @@ boolean makeCocktail(int pos1, int pos2) {
 
     if (!pour1 && pour1Move) {
         pour1 = true;
-        pourOneShot();
+        if(doubleShot){
+            pourOneShot(4000);
+        } else{
+            pourOneShot(1400);
+        }
     }
 
     if (!pour3Move && pour1 && pour1Move) {
@@ -288,7 +294,7 @@ boolean makeCocktail(int pos1, int pos2) {
 
     if (!pour3 && pour3Move) {
         pour3 = true;
-        pourOneShot();
+        pourOneShot(8000);
     }
 
     if (pour1Move && pour3Move && moveToPosition(0)) {
@@ -334,6 +340,12 @@ void Task1code(void* pvParameters) {
                 client.publish("barbot/armedState", "ON");
             } else {
                 client.publish("barbot/armedState", "OFF");
+            }
+
+            if (doubleShot) {
+                client.publish("barbot/double", "ON");
+            } else {
+                client.publish("barbot/double", "OFF");
             }
         }
     }
@@ -427,6 +439,16 @@ void onConnectionEstablished() {
             pourShots = true;
         } else {
             pourShots = false;
+        }
+    });
+
+    client.subscribe("barbot/doubleCommand", [](const String& payload) {
+        TelnetStream.print("double payload is: ");
+        TelnetStream.println(payload);
+        if (payload == "ON") {
+            doubleShot = true;
+        } else {
+            doubleShot = false;
         }
     });
 
