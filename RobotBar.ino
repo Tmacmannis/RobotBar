@@ -96,6 +96,8 @@ void setup() {
     pinMode(home_switch_y, INPUT_PULLUP);
 
     setupOTA("BarBot", mySSID, myPASSWORD);
+    //must use port 23 in telnet client, aka putty
+    TelnetStream.begin();
 
     client.enableDebuggingMessages();                                           // Enable debugging messages sent to serial output
     client.enableHTTPWebUpdater();                                              // Enable the web updater. User and password default to values of MQTTUsername and MQTTPassword. These can be overrited with enableHTTPWebUpdater("user", "password").
@@ -310,7 +312,8 @@ void Task1code(void* pvParameters) {
 
     for (;;) {
         delay(28);
-        ArduinoOTA.handle();
+        //ArduinoOTA.handle();
+        server.handleClient();
         client.loop();  // takes 60 micro seconds to complete, fast...
 
         testStruct.currentPos = stepperX.currentPosition();
