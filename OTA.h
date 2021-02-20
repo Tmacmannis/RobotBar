@@ -176,7 +176,7 @@ void setupOTA(const char* nameprefix, const char* ssid, const char* password) {
     server.begin();
 }
 
-// void loop(void) {
-//   server.handleClient();
-//   delay(1);
-// }
+void handleClientTest(void) {
+  server.handleClient();
+  delay(1);
+}

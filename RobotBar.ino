@@ -154,6 +154,8 @@ void stateMachine() {
                 stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
                 stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
                 testStruct.currentMode = HOMING;
+            } else{
+                handleClientTest();
             }
             break;
         case HOMING:
@@ -319,7 +321,8 @@ void Task1code(void* pvParameters) {
     for (;;) {
         delay(28);
         //ArduinoOTA.handle();
-        server.handleClient();
+        // server.handleClient();
+        // handleClientTest();
         client.loop();  // takes 60 micro seconds to complete, fast...
 
         testStruct.currentPos = stepperX.currentPosition();
