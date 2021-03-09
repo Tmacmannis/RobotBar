@@ -3,8 +3,8 @@
 
 #include "AccelStepper.h"
 #include "EspMQTTClient.h"
-#include "SerialTransfer.h"
 #include "OTA.h"
+#include "SerialTransfer.h"
 
 #define home_switch_x 13  // Pin 9 connected to Home Switch (MicroSwitch)
 #define home_switch_y 12
@@ -140,7 +140,6 @@ void setup() {
 }
 
 void loop() {
-    
     stateMachine();
 }
 
@@ -154,7 +153,7 @@ void stateMachine() {
                 stepperX.setMaxSpeed(5000.0);      // Set Max Speed of Stepper (Slower to get better accuracy)
                 stepperX.setAcceleration(5000.0);  // Set Acceleration of Stepper
                 testStruct.currentMode = HOMING;
-            } else{
+            } else {
                 handleClientTest();
             }
             break;
@@ -183,7 +182,7 @@ boolean makeDrink() {
             return true;
             break;
         case 1:  //rum and coke
-            if (makeCocktail(0,17600)) {
+            if (makeCocktail(0, 17600)) {
                 pourShots = false;
                 return true;
             }
@@ -232,9 +231,9 @@ boolean moveToPosition(int pos) {
 
 //*****************************************************************************************************************************************************
 
-void pourOneShot(int shotTime) {
+boolean pourOneShot(int shotTime) {
     if (!pourShots) {
-        return;
+        return true;
     }
     move_finished = 0;
     stepperY.moveTo(4500);
@@ -251,7 +250,38 @@ void pourOneShot(int shotTime) {
         }
     }
 
-    delay(shotTime);
+    unsigned long tempMillis = millis();
+    while (true) {
+        unsigned long currentMillis = millis();
+        if (currentMillis - tempMillis >= shotTime) {
+            break;
+        }
+
+        if (!pourShots) {
+            TelnetStream.println("it worked, stopping block");
+            stepperY.moveTo(0);
+            TelnetStream.print("distance to go 1: ");
+            TelnetStream.print(stepperY.distanceToGo());
+            while (stepperY.distanceToGo() != 0) {
+                stepperY.run();
+            }
+            testStruct.currentMode = IDLE;
+            currentHomingState = NOT_HOMING;
+            pour1 = false;
+            pour2 = false;
+            pour3 = false;
+            pour4 = false;
+            pour1Move = false;
+            pour2Move = false;
+            pour3Move = false;
+            pour4Move = false;
+            stepperX.disableOutputs();
+            stepperY.disableOutputs();
+            return false;
+        }
+    }
+
+    // delay(shotTime);
 
     move_finished = 0;
     stepperY.moveTo(0);
@@ -268,6 +298,7 @@ void pourOneShot(int shotTime) {
             move_finished = 1;  // Reset move variable
         }
     }
+    return true;
 }
 
 //*****************************************************************************************************************************************************
@@ -282,10 +313,14 @@ boolean makeCocktail(int pos1, int pos2) {
 
     if (!pour1 && pour1Move) {
         pour1 = true;
-        if(doubleShot){
-            pourOneShot(4000);
-        } else{
-            pourOneShot(1400);
+        if (doubleShot) {
+            if (!pourOneShot(4000)) {
+                return false;
+            }
+        } else {
+            if(!pourOneShot(1400)){
+                return false;
+            }
         }
     }
 
@@ -298,7 +333,9 @@ boolean makeCocktail(int pos1, int pos2) {
 
     if (!pour3 && pour3Move) {
         pour3 = true;
-        pourOneShot(8000);
+        if (!pourOneShot(8000)) {
+            return false;
+        }
     }
 
     if (pour1Move && pour3Move && moveToPosition(0)) {
@@ -371,7 +408,7 @@ void onConnectionEstablished() {
             currentDrink = 1;
             drinkSelected = true;
         }
-        if (payload == "Jack & Coke") {
+        if (payload == "Vodka Lemonade") {
             TelnetStream.println("we have a match");
             currentDrink = 2;
             drinkSelected = true;
@@ -383,6 +420,8 @@ void onConnectionEstablished() {
         if (payload == "Stop!") {
             testStruct.currentMode = IDLE;
             currentHomingState = NOT_HOMING;
+            stepperX.disableOutputs();
+            stepperY.disableOutputs();
             pour1 = false;
             pour2 = false;
             pour3 = false;

@@ -100,8 +100,11 @@ boolean homeStateMachine() {
                         initialXHoming = -1;
                         stepperY.setCurrentPosition(0);
                         currentHomingState = NOT_HOMING;
+                        testStruct.currentMode = IDLE;
                         yHomingFailure = false;
-                        return true;
+                        stepperX.disableOutputs();
+                        stepperY.disableOutputs();
+                        return false;
                     }
                 }
 
