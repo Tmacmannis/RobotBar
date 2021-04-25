@@ -79,6 +79,7 @@ boolean pour3Move = false;
 boolean pour4Move = false;
 
 boolean doubleShot = false;
+boolean midPour = false;
 
 int sendRGB[3];
 
@@ -235,6 +236,7 @@ boolean pourOneShot(int shotTime) {
     if (!pourShots) {
         return true;
     }
+    midPour = true;
     move_finished = 0;
     stepperY.moveTo(4500);
 
@@ -247,6 +249,10 @@ boolean pourOneShot(int shotTime) {
         // If move is completed display message on Serial Monitor
         if ((move_finished == 0) && (stepperY.distanceToGo() == 0)) {
             move_finished = 1;  // Reset move variable
+        }
+
+        if(!pourShots){
+            break;
         }
     }
 
@@ -277,6 +283,7 @@ boolean pourOneShot(int shotTime) {
             pour4Move = false;
             stepperX.disableOutputs();
             stepperY.disableOutputs();
+            midPour = false;
             return false;
         }
     }
@@ -298,6 +305,7 @@ boolean pourOneShot(int shotTime) {
             move_finished = 1;  // Reset move variable
         }
     }
+    midPour = false;
     return true;
 }
 
@@ -318,7 +326,7 @@ boolean makeCocktail(int pos1, int pos2) {
                 return false;
             }
         } else {
-            if(!pourOneShot(1400)){
+            if (!pourOneShot(1400)) {
                 return false;
             }
         }
@@ -420,8 +428,12 @@ void onConnectionEstablished() {
         if (payload == "Stop!") {
             testStruct.currentMode = IDLE;
             currentHomingState = NOT_HOMING;
-            stepperX.disableOutputs();
-            stepperY.disableOutputs();
+            if (midPour) {
+                pourShots = false;
+            } else {
+                stepperX.disableOutputs();
+                stepperY.disableOutputs();
+            }
             pour1 = false;
             pour2 = false;
             pour3 = false;
