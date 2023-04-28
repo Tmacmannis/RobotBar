@@ -411,12 +411,12 @@ void onConnectionEstablished() {
         TelnetStream.println(xPortGetCoreID());
         TelnetStream.print("current mode is: ");
         TelnetStream.println(testStruct.currentMode);
-        if (payload == "Rum & Coke") {
+        if (payload == "Tequila Lemonade") {
             TelnetStream.println("we have a match");
             currentDrink = 1;
             drinkSelected = true;
         }
-        if (payload == "Vodka Lemonade") {
+        if (payload == "Vodka Soda") {
             TelnetStream.println("we have a match");
             currentDrink = 2;
             drinkSelected = true;
